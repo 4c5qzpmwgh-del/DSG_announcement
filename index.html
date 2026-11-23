@@ -1,0 +1,2820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DSG 游戏维护公告模板系统（智能识别维护公告 Excel 版）</title>
+  <!-- 引入 SheetJS 支持前端解析供应商发来的维护公告 Excel 文件 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text-main: #0f172a;
+      --text-sub: #475569;
+      --text-muted: #94a3b8;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 10px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1460px;
+      margin: 0 auto;
+    }
+
+    /* 顶部栏 */
+    header {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .header-title h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-title p {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.18s ease;
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-outline {
+      background: #fff;
+      border-color: var(--border);
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .btn-danger-outline {
+      background: #fff;
+      border-color: #fecaca;
+      color: var(--danger);
+    }
+    .btn-danger-outline:hover {
+      background: #fef2f2;
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    /* 顶部主分页切换导航（维护公告 / 活动公告 独立分页） */
+    .top-tab-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      background: var(--card);
+      padding: 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .top-tab-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-sub);
+      transition: all 0.2s ease;
+    }
+
+    .top-tab-btn:hover {
+      background: #f8fafc;
+      color: var(--primary);
+    }
+
+    .top-tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.28);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* 活动公告页专属样式 */
+    .url-fetch-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .url-input-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .url-input-row input {
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .activity-hint {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .period-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .period-item input {
+      flex: 1;
+    }
+
+    .fallback-paste-box {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    /* 常驻操作规范提示条 */
+    .permanent-notice {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #f59e0b;
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #92400e;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow);
+    }
+    .permanent-notice strong {
+      color: #78350f;
+    }
+
+    /* 导入识别结果提示条 */
+    .import-banner {
+      display: none;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: #1e3a8a;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .import-banner.visible {
+      display: flex;
+    }
+
+    /* 主体双栏布局 */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1.05fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 1080px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-routine {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-temp {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    /* 筛选区 */
+    .filter-group {
+      margin-bottom: 16px;
+    }
+
+    .filter-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 8px;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill:hover {
+      border-color: #93c5fd;
+      color: var(--primary);
+    }
+
+    .pill.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      font-weight: 500;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+    }
+
+    .pill .count {
+      font-size: 11px;
+      opacity: 0.85;
+      background: rgba(0,0,0,0.08);
+      padding: 1px 6px;
+      border-radius: 999px;
+    }
+    .pill.active .count {
+      background: rgba(255,255,255,0.22);
+    }
+
+    .search-input-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 9px 34px 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .clear-search {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      display: none;
+    }
+
+    .clear-search.visible {
+      display: block;
+    }
+
+    /* 游戏列表操作栏 */
+    .list-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .list-stats {
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    .toolbar-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* 游戏网格 */
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      max-height: 540px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .game-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: #fff;
+      user-select: none;
+    }
+
+    .game-item:hover {
+      border-color: #93c5fd;
+      background: #f8fafc;
+    }
+
+    .game-item.checked {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .game-item input[type="checkbox"] {
+      margin-top: 3px;
+      accent-color: var(--primary);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .game-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .game-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-main);
+      word-break: break-all;
+    }
+
+    .game-meta {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .tag-platform {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* 右侧配置区 */
+    .mode-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+
+    .mode-btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-sub);
+      transition: all 0.15s ease;
+    }
+
+    .mode-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 5px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+    }
+
+    .time-rule-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .rule-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+      font-size: 12px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .selected-tags-box {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fafc;
+      max-height: 125px;
+      overflow-y: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .selected-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    .selected-chip .remove-chip {
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+      background: none;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .selected-chip .remove-chip:hover {
+      color: var(--danger);
+    }
+
+    .preview-textarea {
+      width: 100%;
+      min-height: 310px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.65;
+      font-family: "PingFang SC", "Microsoft YaHei", monospace;
+      background: #0f172a;
+      color: #f8fafc;
+      resize: vertical;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s ease;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 顶部主分页切换导航：独立分离「维护公告」与「活动公告」 -->
+    <nav class="top-tab-bar" aria-label="公告系统功能分页">
+      <button type="button" class="top-tab-btn active" id="tabBtnMaintenance" onclick="switchMainTab('maintenance')">
+        🔧 维护公告系统（22平台 / 游戏维护）
+      </button>
+      <button type="button" class="top-tab-btn" id="tabBtnActivity" onclick="switchMainTab('activity')">
+        🎉 活动公告系统（网址侦测 / 活动通知）
+      </button>
+    </nav>
+
+    <!-- ==================== 分页一：维护公告系统 ==================== -->
+    <div id="tabMaintenance" class="tab-panel active">
+    <!-- 顶部栏 -->
+    <header>
+      <div class="header-title">
+        <h1>🔧 游戏维护公告模板系统</h1>
+        <p>已内置 22 个平台（共 2,368 款游戏）完整数据，支持多条件筛选及导入维护 Excel 自动侦测游戏与时间</p>
+      </div>
+      <div class="header-actions">
+        <input type="file" id="excelUploader" accept=".xlsx,.xls,.csv" style="display:none" />
+        <button class="btn btn-primary" onclick="document.getElementById('excelUploader').click()">
+          📂 导入维护 Excel（自动侦测游戏与时间）
+        </button>
+        <button class="btn btn-danger-outline" onclick="resetAllFilters()">
+          🔄 重置筛选条件
+        </button>
+      </div>
+    </header>
+
+    <!-- 常驻操作规范提示 -->
+    <div class="permanent-notice">
+      <span style="font-size:16px;">💡</span>
+      <div><strong>上传须知：</strong>上传文件，内容仅填写【游戏名】【维护时间】，文档名请改为【游戏平台名称】后再上传。</div>
+    </div>
+
+    <!-- Excel 智能解析结果提示横幅 -->
+    <div id="importBanner" class="import-banner">
+      <div id="importSummaryText"></div>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('importBanner').classList.remove('visible')">关闭提示</button>
+    </div>
+
+    <div class="main-grid">
+      <!-- 左侧：多条件筛选与游戏勾选区 -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🎮 平台与游戏筛选</span>
+            <span class="badge" id="totalGamesBadge">共 0 款</span>
+          </div>
+          <span style="font-size:12px;color:var(--text-muted)">已勾选 <strong id="selectedCountHeader" style="color:var(--primary)">0</strong> 款游戏</span>
+        </div>
+
+        <!-- 条件1：选择平台（对应 Excel 分页名称） -->
+        <div class="filter-group">
+          <span class="filter-label">1. 选择平台（Excel 分页名称）</span>
+          <div class="pill-list" id="platformPills"></div>
+        </div>
+
+        <!-- 条件2：选择游戏类型（对应每个分页的 C 列） -->
+        <div class="filter-group">
+          <span class="filter-label">2. 选择游戏类型（分页 C 列分类）</span>
+          <div class="pill-list" id="categoryPills"></div>
+        </div>
+
+        <!-- 条件3：输入游戏名称查找 -->
+        <div class="filter-group">
+          <span class="filter-label">3. 搜索游戏名称（支持实时关键字查找勾选）</span>
+          <div class="search-input-wrap">
+            <input
+              type="text"
+              id="searchInput"
+              class="search-input"
+              placeholder="输入游戏名称查找，例如：FIFA、跳高高、水果、捕鱼..."
+            />
+            <button class="clear-search" id="clearSearchBtn" title="清空搜索">×</button>
+          </div>
+        </div>
+
+        <!-- 筛选结果工具栏 -->
+        <div class="list-toolbar">
+          <div class="list-stats">
+            当前筛选命中：<strong id="filteredCount">0</strong> 款游戏
+            <span id="activeFilterSummary" style="margin-left:6px;color:var(--primary);font-size:12px;"></span>
+          </div>
+          <div class="toolbar-btns">
+            <button class="btn btn-primary btn-sm" onclick="selectAllFiltered()">✅ 全选当前结果</button>
+            <button class="btn btn-outline btn-sm" onclick="deselectAllFiltered()">⬜ 取消当前结果</button>
+          </div>
+        </div>
+
+        <!-- 游戏列表容器 -->
+        <div class="game-grid" id="gameGrid"></div>
+      </section>
+
+      <!-- 右侧：公告模板配置与智能生成 -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📝 维护公告配置与生成</span>
+            <span class="badge badge-routine" id="noticeTypeBadge">自动判定：例行维护通知</span>
+          </div>
+          <button class="btn btn-danger-outline btn-sm" onclick="clearAllSelected()">清空已选游戏</button>
+        </div>
+
+        <!-- 维护范围切换：指定游戏维护 vs 全平台维护 -->
+        <div class="mode-switch">
+          <button type="button" class="mode-btn active" id="modeGameBtn" onclick="setMaintenanceScope('game')">
+            🎯 指定/单一游戏维护格式
+          </button>
+          <button type="button" class="mode-btn" id="modePlatformBtn" onclick="setMaintenanceScope('platform')">
+            🌐 全平台维护格式
+          </button>
+        </div>
+
+        <!-- 平台名称选择（用于全平台维护） -->
+        <div class="form-row" id="platformSelectRow" style="display:none;">
+          <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
+            <label>选择全平台维护的目标平台（支持多选，或自动同步左侧已选平台）</label>
+            <div class="pill-list" id="fullPlatformSelector"></div>
+          </div>
+        </div>
+
+        <!-- 已选游戏池（仅在指定游戏模式下显示） -->
+        <div class="form-group" id="selectedGamesSection">
+          <label>已勾选维护游戏（<span id="selectedCountLabel">0</span> 款，仅匹配原有列表中存在的游戏）：</label>
+          <div class="selected-tags-box" id="selectedTagsBox">
+            <span style="color:var(--text-muted);font-size:12px;">暂未勾选任何游戏，请在左侧点击勾选或导入 Excel 自动识别...</span>
+          </div>
+        </div>
+
+        <!-- 时间与自动判定规则区 -->
+        <div class="time-rule-box">
+          <div class="form-row" style="margin-bottom: 8px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>
+                <span>发布时间（用于计算距开始时间差）</span>
+                <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="setPublishNow()">设为当前</button>
+              </label>
+              <input type="datetime-local" id="publishTime" class="form-control" onchange="renderAnnouncement()" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>
+                <span>维护性质判定</span>
+              </label>
+              <select id="noticeTypeOverride" class="form-control" onchange="renderAnnouncement()">
+                <option value="auto">🤖 自动判定（≥2小时例行 / &lt;2小时或无时间临时）</option>
+                <option value="routine">强制设为：例行维护通知</option>
+                <option value="temp">强制设为：临时维护通知</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>
+                <span>开始时间（未侦测到/清空则为「即刻」）</span>
+                <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="clearStartTime()">设为即刻</button>
+              </label>
+              <input type="datetime-local" id="startTime" class="form-control" onchange="renderAnnouncement()" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>
+                <span>结束/完成时间（未侦测到/清空则为「待定」）</span>
+                <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="clearEndTime()">设为待定</button>
+              </label>
+              <input type="datetime-local" id="endTime" class="form-control" onchange="renderAnnouncement()" />
+            </div>
+          </div>
+
+          <div class="rule-status-bar">
+            <span id="timeDiffText" style="color:var(--text-sub);">时间差计算中...</span>
+            <span style="color:var(--text-muted);">未侦测时间：开始=即刻，结束=待定</span>
+          </div>
+        </div>
+
+        <!-- 预览文本框 -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label style="margin:0;">公告文本实时预览：</label>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="copyAnnouncement()">📋 一键复制公告</button>
+              <button class="btn btn-outline btn-sm" onclick="downloadTxt()">💾 导出 TXT</button>
+            </div>
+          </div>
+          <textarea id="announcementPreview" class="preview-textarea" spellcheck="false"></textarea>
+        </div>
+      </section>
+    </div>
+    </div><!-- /#tabMaintenance 维护公告分页结束 -->
+
+    <!-- ==================== 分页二：活动公告系统（完全独立分页） ==================== -->
+    <div id="tabActivity" class="tab-panel">
+      <header>
+        <div class="header-title">
+          <h1>🎉 游戏活动公告生成系统</h1>
+          <p>输入游戏商活动网址自动抓取解析活动名称、总时间、分期时间、规则与参与游戏，一键套用标准格式</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" onclick="loadSampleActivityDemo()">
+            ✨ 填入 FG 示例网址测试
+          </button>
+          <button class="btn btn-danger-outline" onclick="resetActivityForm()">
+            🔄 清空重置活动页
+          </button>
+        </div>
+      </header>
+
+      <div class="main-grid">
+        <!-- 左侧：网址侦测与活动信息编辑区 -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>🌐 活动网址侦测与要素提取</span>
+              <span class="badge" id="actDetectStatusBadge">等待输入网址</span>
+            </div>
+          </div>
+
+          <!-- 方式A：输入活动页面网址自动侦测 -->
+          <div class="url-fetch-box" style="margin-bottom: 12px;">
+            <label class="filter-label" for="actUrlInput">方式一：输入活动页面网址（自动识别平台、活动标题、时间与规则）</label>
+            <div class="url-input-row">
+              <input
+                type="url"
+                id="actUrlInput"
+                class="form-control"
+                placeholder="例如：https://funact.bdnldfu.com/2612BetKingFinals/"
+                oninput="renderActivityAnnouncement()"
+              />
+              <button type="button" class="btn btn-primary" id="btnFetchActivityUrl" onclick="detectActivityFromUrl()">
+                🔍 侦测网址内容
+              </button>
+            </div>
+            <div class="activity-hint">
+              💡 系统会自动抓取网页源码并提取活动信息；若个别活动页限制跨域读取，可点开下方「粘贴活动页面原文自动解析」。
+            </div>
+
+            <!-- 恢复：粘贴活动页面原文自动解析 -->
+            <details class="fallback-paste-box" id="actPasteDetails">
+              <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--primary);">
+                📋 无法直接抓取时点此展开：粘贴活动页面原文自动解析
+              </summary>
+              <div style="margin-top:8px;">
+                <textarea
+                  id="actWebpagePasteText"
+                  class="form-control"
+                  rows="4"
+                  placeholder="直接 Ctrl+A 全选复制活动网页内容粘贴到这里，点击下方按钮自动提取活动名、期数时间与规则..."
+                ></textarea>
+                <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:6px;">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('actWebpagePasteText').value=''">清空</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="parseWebpagePastedText()">
+                    ⚡ 从粘贴内容自动提取要素
+                  </button>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <!-- 方式B：直接复制贴上游戏方提供的内容（常驻展开，贴上自动筛选生成公告） -->
+          <div class="url-fetch-box" style="background: #f0fdf4; border-color: #bbf7d0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+              <label class="filter-label" for="actRawPasteText" style="margin:0;color:#166534;">
+                方式二：复制贴上游戏方提供的内容（贴上后自动筛选提取并生成公告）
+              </label>
+              <div style="display:flex;gap:6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="clearPastedActivityText()">清空原文</button>
+                <button type="button" class="btn btn-primary btn-sm" style="background:#16a34a;" onclick="parsePastedActivityText()">
+                  ⚡ 立即筛选提取并生成公告
+                </button>
+              </div>
+            </div>
+            <textarea
+              id="actRawPasteText"
+              class="form-control"
+              rows="5"
+              placeholder="直接将游戏方发来的活动文案、微信/TG通知、Excel/网页文字复制粘贴到此处，系统会自动筛选出平台、活动名称、活动时间/分期、参加游戏、活动规则及活动网址并生成公告..."
+              onpaste="setTimeout(parsePastedActivityText, 60)"
+            ></textarea>
+            <div class="activity-hint" style="color:#15803d;">
+              ✨ 支持<strong>粘贴即自动触发筛选</strong>（无需额外点击），会自动过滤掉闲聊寒暄、奖金表数字杂讯与免责条款，精准提取核心活动字段。
+            </div>
+          </div>
+
+          <!-- 2. 平台与活动名称 -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>
+                <span>2. 举办平台（自动匹配 22 平台或手动选择）</span>
+              </label>
+              <div style="display:flex;gap:6px;">
+                <select id="actPlatformSelect" class="form-control" style="max-width:130px;" onchange="onActPlatformSelectChange()">
+                  <option value="">-- 选择平台 --</option>
+                </select>
+                <input
+                  type="text"
+                  id="actPlatformName"
+                  class="form-control"
+                  placeholder="例如：FG"
+                  oninput="renderActivityAnnouncement()"
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label><span>3. 活动名称</span></label>
+              <input
+                type="text"
+                id="actTitle"
+                class="form-control"
+                placeholder="例如：年终打码争霸赛"
+                oninput="renderActivityAnnouncement()"
+              />
+            </div>
+          </div>
+
+          <!-- 4. 活动总时间与参与游戏 -->
+          <div class="form-row">
+            <div class="form-group">
+              <label><span>4. 活动总时间</span></label>
+              <input
+                type="text"
+                id="actTotalTime"
+                class="form-control"
+                placeholder="例如：12月01日 ～ 12月28日 （北京时间）"
+                oninput="renderActivityAnnouncement()"
+              />
+            </div>
+            <div class="form-group">
+              <label><span>5. 参加游戏</span></label>
+              <input
+                type="text"
+                id="actGames"
+                class="form-control"
+                value="全部游戏"
+                placeholder="例如：全部游戏 或 指定游戏列表"
+                oninput="renderActivityAnnouncement()"
+              />
+            </div>
+          </div>
+
+          <!-- 6. 分期时间（可选，无分期时自动隐藏） -->
+          <div class="form-group">
+            <label>
+              <span>6. 分期时间明细（侦测到多期自动填入，无分期可留空）</span>
+              <button type="button" class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;" onclick="addActivityPeriodRow('')">
+                ➕ 添加一期
+              </button>
+            </label>
+            <div id="actPeriodsContainer"></div>
+          </div>
+
+          <!-- 7. 活动规则 -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label>
+              <span>7. 活动规则（自动提取编号规则，支持自由微调）</span>
+            </label>
+            <textarea
+              id="actRules"
+              class="form-control"
+              rows="6"
+              placeholder="1. 玩家在平台指定游戏进行有效投注即可参与..."
+              oninput="renderActivityAnnouncement()"
+            ></textarea>
+          </div>
+        </section>
+
+        <!-- 右侧：活动公告实时预览与复制导出 -->
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>📝 活动公告标准格式预览</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="copyActivityAnnouncement()">📋 一键复制公告</button>
+              <button class="btn btn-outline btn-sm" onclick="downloadActivityTxt()">💾 导出 TXT</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:10px;">
+            <label>
+              <span>温馨提醒附加设置：</span>
+              <label style="display:inline-flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;margin:0;">
+                <input type="checkbox" id="actIncludeRtpNote" checked onchange="renderActivityAnnouncement()" />
+                <span>包含「相关费用将由XX平台负担，不影响平台RTP。」</span>
+              </label>
+            </label>
+          </div>
+
+          <textarea
+            id="activityPreview"
+            class="preview-textarea"
+            style="min-height: 500px;"
+            spellcheck="false"
+          ></textarea>
+        </section>
+      </div>
+    </div><!-- /#tabActivity 活动公告分页结束 -->
+  </div>
+
+  <div id="toast" class="toast">提示信息</div>
+
+  <script>
+    // 固定内置原有游戏库（导入外部 Excel 时，绝不新增不存在的新游戏，仅匹配此列表中的既有游戏）
+    const DEFAULT_RAW_DATA = {"CQ9": [{"name": "钻石水果王", "category": "电子游艺"}, {"name": "五福临门", "category": "电子游艺"}, {"name": "水果派对", "category": "电子游艺"}, {"name": "宝石配对", "category": "电子游艺"}, {"name": "海滨消消乐", "category": "电子游艺"}, {"name": "单手跳高高", "category": "电子游艺"}, {"name": "直式跳更高", "category": "电子游艺"}, {"name": "单手跳起来", "category": "电子游艺"}, {"name": "飞起来", "category": "电子游艺"}, {"name": "盗法老墓", "category": "电子游艺"}, {"name": "飞天财神", "category": "电子游艺"}, {"name": "冰雪女王", "category": "电子游艺"}, {"name": "梦游仙境", "category": "电子游艺"}, {"name": "东方神起", "category": "电子游艺"}, {"name": "老司机", "category": "电子游艺"}, {"name": "金玉满堂", "category": "电子游艺"}, {"name": "直式跳起来2", "category": "电子游艺"}, {"name": "印加祖玛", "category": "电子游艺"}, {"name": "直式五福临门", "category": "电子游艺"}, {"name": "锁象无敌", "category": "电子游艺"}, {"name": "直式宙斯", "category": "电子游艺"}, {"name": "直式武圣", "category": "电子游艺"}, {"name": "转大钱", "category": "电子游艺"}, {"name": "直式金鸡报喜2", "category": "电子游艺"}, {"name": "樱花妹子", "category": "电子游艺"}, {"name": "偷金妹子", "category": "电子游艺"}, {"name": "直式发财神", "category": "电子游艺"}, {"name": "再喵一个", "category": "电子游艺"}, {"name": "直式鸿福齐天", "category": "电子游艺"}, {"name": "直式金鸡报喜", "category": "电子游艺"}, {"name": "奔跑吧猛兽", "category": "电子游艺"}, {"name": "直式蹦迪", "category": "电子游艺"}, {"name": "跳过来", "category": "电子游艺"}, {"name": "直式火烧连环船", "category": "电子游艺"}, {"name": "火烧连环船2", "category": "电子游艺"}, {"name": "圣诞来啦", "category": "电子游艺"}, {"name": "火神", "category": "电子游艺"}, {"name": "发财福娃", "category": "电子游艺"}, {"name": "钻更多", "category": "电子游艺"}, {"name": "九连宝灯", "category": "电子游艺"}, {"name": "花开富贵", "category": "电子游艺"}, {"name": "有如神柱", "category": "电子游艺"}, {"name": "金鸡报喜", "category": "电子游艺"}, {"name": "寿星大发", "category": "电子游艺"}, {"name": "双飞", "category": "电子游艺"}, {"name": "六颗糖", "category": "电子游艺"}, {"name": "宙斯他爹", "category": "电子游艺"}, {"name": "五形拳", "category": "电子游艺"}, {"name": "黑悟空", "category": "电子游艺"}, {"name": "五行", "category": "电子游艺"}, {"name": "祥狮献瑞", "category": "电子游艺"}, {"name": "麻将胡了万路发", "category": "电子游艺"}, {"name": "风火轮", "category": "电子游艺"}, {"name": "棋圣", "category": "电子游艺"}, {"name": "发发发", "category": "电子游艺"}, {"name": "拳霸", "category": "电子游艺"}, {"name": "舞媚娘", "category": "电子游艺"}, {"name": "嗨起来", "category": "电子游艺"}, {"name": "百宝箱", "category": "电子游艺"}, {"name": "蹦迪", "category": "电子游艺"}, {"name": "野狼传说", "category": "电子游艺"}, {"name": "庶务西游二课", "category": "电子游艺"}, {"name": "狄仁杰四大天王", "category": "电子游艺"}, {"name": "百戏", "category": "电子游艺"}, {"name": "冒险岛", "category": "电子游艺"}, {"name": "财迷小妖", "category": "电子游艺"}, {"name": "多虎多财", "category": "电子游艺"}, {"name": "发发发财神", "category": "电子游艺"}, {"name": "魔镜魔镜", "category": "电子游艺"}, {"name": "金元宝", "category": "电子游艺"}, {"name": "跳起来2", "category": "电子游艺"}, {"name": "钓鱼趣", "category": "电子游艺"}, {"name": "蹦迪狂欢夜", "category": "电子游艺"}, {"name": "孙大圣_Sung Wukong", "category": "电子游艺"}, {"name": "777", "category": "电子游艺"}, {"name": "魔法世界", "category": "电子游艺"}, {"name": "水世界", "category": "电子游艺"}, {"name": "血之吻", "category": "电子游艺"}, {"name": "武圣", "category": "电子游艺"}, {"name": "通天神探狄仁杰", "category": "电子游艺"}, {"name": "火烧连环船", "category": "电子游艺"}, {"name": "地鼠战役", "category": "电子游艺"}, {"name": "疯狂哪吒", "category": "电子游艺"}, {"name": "夜店大亨", "category": "电子游艺"}, {"name": "舞力全开", "category": "电子游艺"}, {"name": "飞天", "category": "电子游艺"}, {"name": "森林泰后", "category": "电子游艺"}, {"name": "福尔摩斯", "category": "电子游艺"}, {"name": "豪华水果王", "category": "电子游艺"}, {"name": "狼月", "category": "电子游艺"}, {"name": "法老宝藏", "category": "电子游艺"}, {"name": "寂寞星球", "category": "电子游艺"}, {"name": "金大款", "category": "电子游艺"}, {"name": "鸿福齐天", "category": "电子游艺"}, {"name": "大发财", "category": "电子游艺"}, {"name": "嗨爆大马戏", "category": "电子游艺"}, {"name": "跳高高", "category": "电子游艺"}, {"name": "火草泥马", "category": "电子游艺"}, {"name": "魔龙传奇", "category": "电子游艺"}, {"name": "神兽争霸", "category": "电子游艺"}, {"name": "金鸡报囍2", "category": "电子游艺"}, {"name": "夏日猩情", "category": "电子游艺"}, {"name": "丛林舞会", "category": "电子游艺"}, {"name": "别让她知道", "category": "电子游艺"}, {"name": "就暖圣诞", "category": "电子游艺"}, {"name": "天天吃豆", "category": "电子游艺"}, {"name": "宙斯", "category": "电子游艺"}, {"name": "火爆777", "category": "电子游艺"}, {"name": "赚金蛋", "category": "电子游艺"}, {"name": "悟空偷桃", "category": "电子游艺"}, {"name": "发财神", "category": "电子游艺"}, {"name": "跳起来", "category": "电子游艺"}, {"name": "万饱龙", "category": "电子游艺"}, {"name": "摆脱", "category": "电子游艺"}, {"name": "好运年年", "category": "电子游艺"}, {"name": "聚宝盆", "category": "电子游艺"}, {"name": "旺旺旺", "category": "电子游艺"}, {"name": "火凤凰", "category": "电子游艺"}, {"name": "阿波罗", "category": "电子游艺"}, {"name": "变色龙", "category": "电子游艺"}, {"name": "甜蜜蜜", "category": "电子游艺"}, {"name": "传奇海神", "category": "电子游艺"}, {"name": "金银岛", "category": "电子游艺"}, {"name": "火之女王", "category": "电子游艺"}, {"name": "牛逼快跑", "category": "电子游艺"}, {"name": "雷神", "category": "电子游艺"}, {"name": "钟馗运财", "category": "电子游艺"}, {"name": "2018世界杯", "category": "电子游艺"}, {"name": "世界杯球鞋", "category": "电子游艺"}, {"name": "足球宝贝", "category": "电子游艺"}, {"name": "世界杯全明星", "category": "电子游艺"}, {"name": "跳更高", "category": "电子游艺"}, {"name": "皇金渔场", "category": "捕鱼游戏"}, {"name": "万人牛牛", "category": "棋牌游戏"}, {"name": "海霸龙", "category": "捕鱼游戏"}, {"name": "妙笔生财", "category": "电子游艺"}, {"name": "喵财进宝", "category": "电子游艺"}, {"name": "此地无银三百两", "category": "电子游艺"}, {"name": "斗地主经典版", "category": "电子游艺"}, {"name": "鱼跃龙门", "category": "电子游艺"}, {"name": "丛林宝藏", "category": "电子游艺"}, {"name": "功夫小神通", "category": "电子游艺"}, {"name": "点石成金", "category": "电子游艺"}, {"name": "金碧辉煌", "category": "电子游艺"}, {"name": "爱琴海", "category": "电子游艺"}, {"name": "幸运传奇", "category": "电子游艺"}, {"name": "僵尸的宝藏", "category": "电子游艺"}, {"name": "斗地主升级版", "category": "电子游艺"}, {"name": "运气靴", "category": "电子游艺"}, {"name": "疯狂马戏团", "category": "电子游艺"}, {"name": "驯龙高手", "category": "电子游艺"}, {"name": "好莱坞宠物", "category": "电子游艺"}, {"name": "幸运3", "category": "电子游艺"}, {"name": "塞特的宝藏", "category": "电子游艺"}, {"name": "疯狂软糖", "category": "电子游艺"}, {"name": "圣诞故事", "category": "电子游艺"}, {"name": "死亡女王", "category": "电子游艺"}, {"name": "猪的运气", "category": "电子游艺"}, {"name": "一炮捕鱼", "category": "捕鱼游戏"}, {"name": "雷电战机", "category": "捕鱼游戏"}, {"name": "欢乐捕鱼", "category": "捕鱼游戏"}, {"name": "喵喵", "category": "电子游艺"}, {"name": "丧尸大餐", "category": "电子游艺"}, {"name": "火烧办公处", "category": "电子游艺"}, {"name": "异外来客", "category": "电子游艺"}, {"name": "厕所囧境", "category": "电子游艺"}, {"name": "骰宝", "category": "棋牌游戏"}, {"name": "钻石水果", "category": "电子游艺"}, {"name": "浴水则发", "category": "电子游艺"}, {"name": "开心抓虫", "category": "电子游艺"}, {"name": "恶猫邪神", "category": "电子游艺"}, {"name": "麻雀开胡", "category": "电子游艺"}, {"name": "糖果连萌", "category": "电子游艺"}, {"name": "狂野巫师", "category": "电子游艺"}, {"name": "黄金荷鲁斯", "category": "电子游艺"}, {"name": "泰式博丁", "category": "电子游艺"}, {"name": "泰式鱼虾蟹", "category": "电子游艺"}, {"name": "芝加哥2", "category": "电子游艺"}, {"name": "足球狂热", "category": "电子游艺"}, {"name": "英雄捕鱼", "category": "电子游艺"}, {"name": "一棒捕鱼", "category": "捕鱼游戏"}, {"name": "皇金渔场2", "category": "捕鱼游戏"}, {"name": "足球冲锋", "category": "电子游艺"}, {"name": "爆射哥吉拉", "category": "捕鱼游戏"}, {"name": "168福袋", "category": "电子游艺"}, {"name": "转转赚", "category": "电子游艺"}, {"name": "哇达宗师", "category": "电子游艺"}, {"name": "哇达宗师2", "category": "电子游艺"}, {"name": "蹦迪猪宝", "category": "电子游艺"}, {"name": "充电宝", "category": "电子游艺"}, {"name": "哇达宗师急速版", "category": "电子游艺"}, {"name": "爽歪歪", "category": "电子游艺"}, {"name": "爽歪歪2", "category": "电子游艺"}, {"name": "爽歪歪3", "category": "电子游艺"}, {"name": "奥林帕斯传承", "category": "电子游艺"}, {"name": "麻将开胡", "category": "电子游艺"}, {"name": "麻将开胡2", "category": "电子游艺"}, {"name": "超神王牌", "category": "电子游艺"}, {"name": "超神王牌2", "category": "电子游艺"}, {"name": "寻宝黄金城2", "category": "电子游艺"}, {"name": "麻将开胡3", "category": "电子游艺"}, {"name": "招财宝石", "category": "电子游艺"}, {"name": "招财喵新春", "category": "电子游艺"}, {"name": "大过年豪华版", "category": "电子游艺"}, {"name": "赏金大对决 2", "category": "电子游艺"}, {"name": "麒麟献宝 至尊版", "category": "电子游艺"}, {"name": "金钱兔爆爆版", "category": "电子游艺"}], "SSP": [{"name": "FIFA 2026", "category": "电子游艺"}, {"name": "丛林派对", "category": "捕鱼游戏"}, {"name": "亡灵狂欢", "category": "电子游艺"}, {"name": "美女水果机", "category": "棋牌游戏"}, {"name": "渔乐天下", "category": "捕鱼游戏"}, {"name": "福气财神", "category": "电子游艺"}, {"name": "财富之书", "category": "电子游艺"}, {"name": "经典水果机", "category": "棋牌游戏"}, {"name": "梦游仙境", "category": "电子游艺"}, {"name": "冰雪女王2", "category": "电子游艺"}, {"name": "龙虎斗", "category": "棋牌游戏"}, {"name": "圣诞佳人", "category": "电子游艺"}, {"name": "大富豪", "category": "电子游艺"}, {"name": "好运猫猫", "category": "电子游艺"}, {"name": "百变猴子", "category": "电子游艺"}, {"name": "电影万岁", "category": "电子游艺"}, {"name": "森巴狂欢", "category": "电子游艺"}, {"name": "火热足球", "category": "电子游艺"}, {"name": "幸运777", "category": "电子游艺"}, {"name": "捕鱼大咖", "category": "捕鱼游戏"}, {"name": "多福多财", "category": "电子游艺"}, {"name": "跳嗨嗨", "category": "电子游艺"}, {"name": "水果派对", "category": "电子游艺"}, {"name": "捕鱼大亨", "category": "捕鱼游戏"}, {"name": "喜钱炸金花", "category": "棋牌游戏"}, {"name": "龙虎斗", "category": "棋牌游戏"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "万人炸金花", "category": "棋牌游戏"}, {"name": "看三张抢庄牛牛", "category": "棋牌游戏"}, {"name": "看四张抢庄牛牛", "category": "棋牌游戏"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "二人麻将", "category": "棋牌游戏"}, {"name": "单挑牛牛", "category": "棋牌游戏"}, {"name": "对战二八杠", "category": "棋牌游戏"}, {"name": "抢庄牌九", "category": "棋牌游戏"}, {"name": "水果机", "category": "棋牌游戏"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "黄金满堂", "category": "电子游艺"}, {"name": "掼蛋", "category": "棋牌游戏"}, {"name": "飞禽走兽", "category": "棋牌游戏"}, {"name": "万人炸金花", "category": "棋牌游戏"}, {"name": "水果机", "category": "棋牌游戏"}, {"name": "抢庄牌九", "category": "棋牌游戏"}, {"name": "点石成金", "category": "电子游艺"}, {"name": "冰雪女王", "category": "电子游艺"}, {"name": "百人骰宝", "category": "棋牌游戏"}, {"name": "十三水", "category": "棋牌游戏"}, {"name": "红黑大战", "category": "棋牌游戏"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "二人麻将", "category": "棋牌游戏"}, {"name": "单挑牛牛", "category": "棋牌游戏"}, {"name": "21点", "category": "棋牌游戏"}, {"name": "埃及祕宝", "category": "电子游艺"}, {"name": "矮人金矿", "category": "电子游艺"}, {"name": "看三张抢庄牛牛", "category": "棋牌游戏"}, {"name": "鼠鼠福福", "category": "电子游艺"}, {"name": "十倍金牛", "category": "电子游艺"}, {"name": "虎虎生财", "category": "电子游艺"}, {"name": "金钱兔", "category": "电子游艺"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "百搭魔术帽", "category": "电子游艺"}, {"name": "癞子牛牛", "category": "棋牌游戏"}, {"name": "【极速】澳门六合彩", "category": "电子游艺"}, {"name": "万人推筒子", "category": "棋牌游戏"}, {"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "奔馳寶馬", "category": "棋牌游戏"}, {"name": "芝麻开门", "category": "电子游艺"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "对战二八杠", "category": "棋牌游戏"}, {"name": "深海狩猎", "category": "捕鱼游戏"}, {"name": "777豪华版", "category": "电子游艺"}, {"name": "看四张抢庄牛牛", "category": "棋牌游戏"}, {"name": "黑豹传说", "category": "电子游艺"}, {"name": "热钱滚滚", "category": "电子游艺"}, {"name": "辣翻天", "category": "电子游艺"}, {"name": "森林舞会", "category": "棋牌游戏"}, {"name": "极地大探险", "category": "电子游艺"}, {"name": "幸运草金币", "category": "电子游艺"}, {"name": "黄金彩虹", "category": "电子游艺"}, {"name": "五福临门", "category": "刮刮卡"}, {"name": "修仙渡劫", "category": "特色游戏"}, {"name": "好运十倍", "category": "刮刮卡"}, {"name": "黄金猪", "category": "电子游艺"}, {"name": "水果派对2", "category": "电子游艺"}, {"name": "爆金大野狼", "category": "电子游艺"}, {"name": "狂野西部", "category": "电子游艺"}, {"name": "赏金女帝", "category": "电子游艺"}, {"name": "快乐8", "category": "刮刮卡"}, {"name": "点石成金", "category": "刮刮卡"}, {"name": "777巨大城市", "category": "电子游艺"}, {"name": "劲爆烧烤", "category": "电子游艺"}, {"name": "超级王牌", "category": "电子游艺"}, {"name": "惊天大劫案", "category": "电子游艺"}, {"name": "点球大战", "category": "刮刮卡"}, {"name": "十倍幸运", "category": "刮刮卡"}, {"name": "大7", "category": "刮刮卡"}, {"name": "綠翡翠9", "category": "刮刮卡"}, {"name": "澳6水果机", "category": "棋牌游戏"}, {"name": "捕鱼财神", "category": "捕鱼游戏"}, {"name": "中国红", "category": "刮刮卡"}, {"name": "黄金野牛", "category": "电子游艺"}, {"name": "刮刮樂_寶石之王", "category": "刮刮卡"}, {"name": "斗鸡", "category": "棋牌游戏"}, {"name": "色碟", "category": "棋牌游戏"}, {"name": "森林舞会 澳6版", "category": "棋牌游戏"}, {"name": "高低HILO", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "红黑大战", "category": "棋牌游戏"}, {"name": "奔驰宝马", "category": "棋牌游戏"}, {"name": "飞禽走兽", "category": "棋牌游戏"}, {"name": "森林舞会", "category": "棋牌游戏"}, {"name": "百人骰宝", "category": "棋牌游戏"}, {"name": "万人推筒子", "category": "棋牌游戏"}, {"name": "癩子牛牛", "category": "棋牌游戏"}, {"name": "一飞冲天", "category": "特色游戏"}, {"name": "宝石与地雷", "category": "特色游戏"}, {"name": "星之塔", "category": "特色游戏"}], "熊猫体育": [{"name": "熊猫体育", "category": "体育投注"}, {"name": "香港六合彩", "category": "港澳六合"}, {"name": "澳门六合彩", "category": "港澳六合"}], "SABA体育": [{"name": "沙巴体育", "category": "体育投注"}], "Live体育": [{"name": "Live体育", "category": "体育投注"}], "1Bet": [{"name": "捕鱼大世界", "category": "捕鱼游戏"}, {"name": "宝石矿工", "category": "电子游艺"}, {"name": "末日求生", "category": "电子游艺"}, {"name": "寒冰宝藏", "category": "电子游艺"}, {"name": "吉祥小财神", "category": "电子游艺"}, {"name": "寻梦之旅", "category": "电子游艺"}, {"name": "海盗船黄金", "category": "电子游艺"}, {"name": "宙斯VS哈迪斯", "category": "电子游艺"}, {"name": "水果王国", "category": "电子游艺"}, {"name": "极速糖果", "category": "电子游艺"}, {"name": "水果王国", "category": "电子游艺"}, {"name": "幸運獅子", "category": "电子游艺"}, {"name": "咕咕咕", "category": "电子游艺"}, {"name": "狼月", "category": "电子游艺"}, {"name": "绝命忍者", "category": "电子游艺"}, {"name": "雷霆万钧", "category": "电子游艺"}, {"name": "麻将胡了Pro", "category": "电子游艺"}, {"name": "大鲈鱼赏金", "category": "电子游艺"}, {"name": "极速糖果", "category": "电子游艺"}, {"name": "幸运电玩金猪", "category": "电子游艺"}, {"name": "超级7S", "category": "电子游艺"}, {"name": "玛雅文明", "category": "电子游艺"}, {"name": "迦罗秘宝", "category": "电子游艺"}, {"name": "扭蛋机", "category": "电子游艺"}, {"name": "财富女神", "category": "电子游艺"}, {"name": "星之宝藏", "category": "电子游艺"}, {"name": "千古的爱恋", "category": "电子游艺"}, {"name": "双赢金牛", "category": "电子游艺"}, {"name": "白羊座荣耀", "category": "电子游艺"}, {"name": "喜气洋洋", "category": "电子游艺"}, {"name": "航海王", "category": "电子游艺"}, {"name": "莲花童子：哪吒", "category": "电子游艺"}, {"name": "龙息之焰", "category": "电子游艺"}, {"name": "黑神话：天命人", "category": "电子游艺"}, {"name": "富贵熊猫", "category": "电子游艺"}, {"name": "天蝎秘宝", "category": "电子游艺"}, {"name": "神之守护者", "category": "电子游艺"}, {"name": "财富双子星", "category": "电子游艺"}, {"name": "水晶幻象", "category": "电子游艺"}, {"name": "嘻哈大圣", "category": "电子游艺"}, {"name": "相扑之王", "category": "电子游艺"}, {"name": "宝石矿工", "category": "电子游艺"}, {"name": "双鱼聚宝", "category": "电子游艺"}, {"name": "巨星", "category": "电子游艺"}, {"name": "鱼跃龙门", "category": "电子游艺"}, {"name": "阳光排球", "category": "电子游艺"}, {"name": "超市大赢家", "category": "电子游艺"}, {"name": "大展宏兔", "category": "电子游艺"}, {"name": "桑巴狂欢", "category": "电子游艺"}, {"name": "小丑派对", "category": "电子游艺"}, {"name": "热血足球", "category": "电子游艺"}, {"name": "德古拉：黑暗财富", "category": "电子游艺"}, {"name": "黄金射手座", "category": "电子游艺"}, {"name": "黄金城之谜", "category": "电子游艺"}, {"name": "探秘埃及", "category": "电子游艺"}, {"name": "雅典娜", "category": "电子游艺"}, {"name": "复活节惊喜", "category": "电子游艺"}, {"name": "亲爱的", "category": "电子游艺"}, {"name": "圣诞狂欢夜", "category": "电子游艺"}, {"name": "月光秘宝", "category": "电子游艺"}, {"name": "寿司の道", "category": "电子游艺"}, {"name": "魔法神灯", "category": "电子游艺"}, {"name": "烧烤派对", "category": "电子游艺"}, {"name": "亡灵庆典", "category": "电子游艺"}, {"name": "寻宝俏佳人", "category": "电子游艺"}, {"name": "灵魂烛火：万圣节之夜", "category": "电子游艺"}, {"name": "阿芙洛狄忒的宝藏", "category": "电子游艺"}, {"name": "宝瓶公主", "category": "电子游艺"}, {"name": "海洋财富之旅", "category": "电子游艺"}, {"name": "奇妙嘉年华", "category": "电子游艺"}, {"name": "王牌DJ", "category": "电子游艺"}, {"name": "国王游戏", "category": "电子游艺"}, {"name": "甜心盛宴", "category": "电子游艺"}, {"name": "银河之战", "category": "电子游艺"}, {"name": "蒸汽时代", "category": "电子游艺"}, {"name": "汪汪送财", "category": "电子游艺"}, {"name": "感恩节", "category": "电子游艺"}, {"name": "狮子座传说", "category": "电子游艺"}, {"name": "小鸡快跑", "category": "棋牌游戏"}, {"name": "Crash", "category": "棋牌游戏"}, {"name": "大力工头", "category": "电子游艺"}, {"name": "福音战士", "category": "电子游艺"}, {"name": "海物语", "category": "电子游艺"}, {"name": "接财神", "category": "电子游艺"}, {"name": "刮刮卡", "category": "棋牌游戏"}, {"name": "7上7下", "category": "棋牌游戏"}, {"name": "龙虎斗", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "精灵宝可梦-皮卡丘", "category": "电子游艺"}, {"name": "发财神", "category": "电子游艺"}, {"name": "命运-冠位", "category": "电子游艺"}, {"name": "赢财神", "category": "电子游艺"}, {"name": "财神来了", "category": "电子游艺"}, {"name": "开心财神", "category": "电子游艺"}, {"name": "X战警-天启", "category": "电子游艺"}, {"name": "植物大战僵尸", "category": "电子游艺"}, {"name": "寒冰王座", "category": "电子游艺"}, {"name": "瘟疫之地", "category": "电子游艺"}, {"name": "烈焰地狱", "category": "电子游艺"}, {"name": "Crash", "category": "棋牌游戏"}, {"name": "财神捕鱼", "category": "捕鱼游戏"}, {"name": "红黑大战", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "Mines", "category": "棋牌游戏"}, {"name": "光与暗之混乱", "category": "电子游艺"}, {"name": "光与暗之坠落", "category": "电子游艺"}, {"name": "神话之魔童降世", "category": "电子游艺"}, {"name": "神话之姜子牙", "category": "电子游艺"}, {"name": "阿拉丁神灯", "category": "电子游艺"}, {"name": "麻将胡了", "category": "电子游艺"}, {"name": "捕鱼365", "category": "捕鱼游戏"}, {"name": "欢乐打地鼠", "category": "捕鱼游戏"}, {"name": "三国无双", "category": "捕鱼游戏"}, {"name": "奔驰宝马", "category": "棋牌游戏"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "百人骰宝", "category": "棋牌游戏"}, {"name": "黄金大转轮", "category": "棋牌游戏"}, {"name": "智龙迷城", "category": "电子游艺"}, {"name": "糖果消消乐", "category": "电子游艺"}, {"name": "古墓寻宝", "category": "电子游艺"}, {"name": "嗨爆了", "category": "电子游艺"}, {"name": "嗨一嗨", "category": "电子游艺"}, {"name": "俄罗斯转盘", "category": "棋牌游戏"}, {"name": "色碟", "category": "棋牌游戏"}, {"name": "嗨翻天", "category": "电子游艺"}, {"name": "嗨起来", "category": "电子游艺"}, {"name": "珠宝拍卖", "category": "电子游艺"}, {"name": "捕鱼发发发", "category": "捕鱼游戏"}, {"name": "星际战警", "category": "捕鱼游戏"}, {"name": "斗鸡", "category": "棋牌游戏"}, {"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "西游捕鱼3D", "category": "捕鱼游戏"}, {"name": "王者狩猎", "category": "捕鱼游戏"}, {"name": "西部牛仔PRO", "category": "电子游艺"}, {"name": "复仇者联盟", "category": "电子游艺"}, {"name": "绿巨人", "category": "电子游艺"}, {"name": "地产大亨", "category": "棋牌游戏"}, {"name": "动物森林", "category": "棋牌游戏"}, {"name": "雷神", "category": "电子游艺"}, {"name": "美国队长", "category": "电子游艺"}, {"name": "巴霍巴利王", "category": "电子游艺"}, {"name": "阿克巴大帝", "category": "电子游艺"}, {"name": "阿育王", "category": "电子游艺"}, {"name": "足球先生", "category": "电子游艺"}, {"name": "部落冲突", "category": "电子游艺"}, {"name": "火焰纹章", "category": "电子游艺"}, {"name": "秦墓探宝", "category": "电子游艺"}, {"name": "正义联盟", "category": "电子游艺"}, {"name": "神奇四侠", "category": "电子游艺"}, {"name": "番摊", "category": "棋牌游戏"}, {"name": "三倍猴子", "category": "电子游艺"}, {"name": "炉石传说", "category": "电子游艺"}, {"name": "真女神转生", "category": "电子游艺"}, {"name": "植物大战僵尸", "category": "电子游艺"}, {"name": "马里奥赛车", "category": "电子游艺"}, {"name": "模拟人生", "category": "电子游艺"}, {"name": "灌篮高手之全国大赛", "category": "电子游艺"}, {"name": "十二生肖", "category": "电子游艺"}, {"name": "越狱", "category": "电子游艺"}, {"name": "嗨到底", "category": "电子游艺"}, {"name": "三联爆", "category": "棋牌游戏"}, {"name": "五龙争霸", "category": "电子游艺"}, {"name": "旋转勇者", "category": "电子游艺"}, {"name": "最终幻想Ⅰ", "category": "电子游艺"}, {"name": "动物之森", "category": "电子游艺"}, {"name": "使命召唤", "category": "电子游艺"}, {"name": "湛蓝深海", "category": "电子游艺"}, {"name": "牛郎织女", "category": "电子游艺"}, {"name": "星之卡比", "category": "电子游艺"}, {"name": "百鬼夜宴", "category": "电子游艺"}, {"name": "伊苏：起源", "category": "电子游艺"}, {"name": "最终幻想Ⅲ", "category": "电子游艺"}, {"name": "英雄联盟", "category": "电子游艺"}, {"name": "捕鱼来了3D", "category": "捕鱼游戏"}, {"name": "潘金莲", "category": "电子游艺"}, {"name": "最强王者", "category": "电子游艺"}, {"name": "喷射战士", "category": "电子游艺"}, {"name": "极品飞车", "category": "电子游艺"}, {"name": "招财进宝", "category": "电子游艺"}, {"name": "八张牛牛", "category": "棋牌游戏"}, {"name": "水泊梁山", "category": "电子游艺"}, {"name": "弹丸轮舞", "category": "电子游艺"}, {"name": "双面女王", "category": "电子游艺"}, {"name": "Hilo", "category": "棋牌游戏"}, {"name": "死神之双殛之战", "category": "电子游艺"}, {"name": "麒麟传", "category": "电子游艺"}, {"name": "最终幻想Ⅱ", "category": "电子游艺"}, {"name": "百人二八杠", "category": "棋牌游戏"}, {"name": "粉红诱惑", "category": "电子游艺"}, {"name": "灌篮高手", "category": "电子游艺"}, {"name": "超级变变变", "category": "电子游艺"}, {"name": "埃及女王", "category": "电子游艺"}, {"name": "唐人街探案", "category": "电子游艺"}, {"name": "时来运转", "category": "电子游艺"}, {"name": "船长宝藏", "category": "电子游艺"}, {"name": "皇室战争", "category": "电子游艺"}, {"name": "开心农场", "category": "电子游艺"}, {"name": "六张牛牛", "category": "棋牌游戏"}, {"name": "符文密语", "category": "电子游艺"}, {"name": "猜拳", "category": "棋牌游戏"}, {"name": "三国之逐鹿中原", "category": "电子游艺"}, {"name": "四海龙王", "category": "电子游艺"}, {"name": "劳拉", "category": "电子游艺"}, {"name": "塞尔达", "category": "电子游艺"}, {"name": "太鼓达人", "category": "电子游艺"}, {"name": "三倍猴子PRO", "category": "电子游艺"}, {"name": "女神异闻录", "category": "电子游艺"}, {"name": "愤怒的小鸟", "category": "电子游艺"}, {"name": "三色球", "category": "棋牌游戏"}, {"name": "群芳争艳", "category": "电子游艺"}, {"name": "斯巴达勇士", "category": "电子游艺"}, {"name": "蝙蝠侠之黑暗骑士", "category": "电子游艺"}, {"name": "蜘蛛侠", "category": "电子游艺"}, {"name": "癞子牛牛", "category": "棋牌游戏"}, {"name": "赌城大亨", "category": "电子游艺"}, {"name": "西游之降妖篇", "category": "电子游艺"}, {"name": "德古拉家族", "category": "电子游艺"}, {"name": "逆转裁判", "category": "电子游艺"}, {"name": "多福多财", "category": "电子游艺"}, {"name": "金玉满堂", "category": "电子游艺"}, {"name": "仙剑奇侠传", "category": "电子游艺"}, {"name": "四海龙王之御龙在天", "category": "电子游艺"}, {"name": "堡垒之夜", "category": "电子游艺"}, {"name": "最终幻想Ⅴ", "category": "电子游艺"}, {"name": "彩金战机", "category": "捕鱼游戏"}, {"name": "幸运鞭炮", "category": "电子游艺"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "勇气默示录", "category": "电子游艺"}, {"name": "魔女贝尼特", "category": "电子游艺"}, {"name": "侠盗猎车罪恶都市", "category": "电子游艺"}, {"name": "背后灵", "category": "电子游艺"}, {"name": "泰坦尼克号", "category": "电子游艺"}, {"name": "最终幻想Ⅳ", "category": "电子游艺"}, {"name": "钢铁侠", "category": "电子游艺"}, {"name": "鹿鼎记", "category": "电子游艺"}, {"name": "嗨嗨嗨", "category": "电子游艺"}, {"name": "鱼虾蟹", "category": "棋牌游戏"}, {"name": "天天捕鸟", "category": "捕鱼游戏"}, {"name": "转盘", "category": "棋牌游戏"}, {"name": "梦幻模拟战", "category": "电子游艺"}, {"name": "Plinko", "category": "棋牌游戏"}, {"name": "阴阳师", "category": "电子游艺"}, {"name": "狂野沙滩", "category": "电子游艺"}, {"name": "钢铁侠2", "category": "电子游艺"}, {"name": "怒风神殿", "category": "电子游艺"}, {"name": "疯狂七", "category": "电子游艺"}, {"name": "海岛奇兵", "category": "电子游艺"}, {"name": "魔戒", "category": "电子游艺"}, {"name": "异度之刃", "category": "电子游艺"}, {"name": "DOTA2", "category": "电子游艺"}, {"name": "足球之绝代双娇", "category": "电子游艺"}, {"name": "西部淘金", "category": "电子游艺"}, {"name": "皮克敏", "category": "电子游艺"}, {"name": "疯狂牌九", "category": "电子游艺"}, {"name": "和平精英", "category": "电子游艺"}, {"name": "恶魔召唤师", "category": "电子游艺"}, {"name": "百家乐QiuQiu", "category": "棋牌游戏"}, {"name": "超级马里奥", "category": "电子游艺"}, {"name": "基诺球", "category": "棋牌游戏"}, {"name": "FORTUNE BINGO", "category": "电子游艺"}, {"name": "幸运元宵", "category": "电子游艺"}, {"name": "绝地求生", "category": "电子游艺"}, {"name": "虚荣", "category": "电子游艺"}, {"name": "X第一战", "category": "电子游艺"}, {"name": "杰克船长", "category": "电子游艺"}, {"name": "丛林迷情", "category": "电子游艺"}, {"name": "BINGO Carnaval", "category": "电子游艺"}, {"name": "西部牛仔", "category": "电子游艺"}, {"name": "猎天使魔女", "category": "电子游艺"}, {"name": "捕鱼大决战", "category": "捕鱼游戏"}, {"name": "21点", "category": "棋牌游戏"}, {"name": "iRich Bingo", "category": "电子游艺"}, {"name": "尼尔机械纪元", "category": "电子游艺"}, {"name": "SUPER BINGO", "category": "电子游艺"}, {"name": "骰宝", "category": "棋牌游戏"}, {"name": "小鸡冲刺", "category": "电子游艺"}, {"name": "小魔仙", "category": "电子游艺"}, {"name": "龙虎斗2", "category": "电子游艺"}], "PP": [{"name": "奥林匹斯之门", "category": "电子游艺"}, {"name": "战士之眼", "category": "电子游艺"}, {"name": "5金狮 Megaways", "category": "电子游艺"}, {"name": "极速糖果", "category": "电子游艺"}, {"name": "奥林匹斯之门 1000", "category": "电子游艺"}, {"name": "极速糖果1000", "category": "电子游艺"}, {"name": "宙斯vs哈迪斯-众神之战", "category": "电子游艺"}, {"name": "星光公主", "category": "电子游艺"}, {"name": "甜入心扉", "category": "电子游艺"}, {"name": "极速糖果圣诞", "category": "电子游艺"}, {"name": "巨大犀牛 Megaways", "category": "电子游艺"}, {"name": "星光公主 1000", "category": "电子游艺"}, {"name": "王者野牛 Megaways", "category": "电子游艺"}, {"name": "雅典娜的智慧", "category": "电子游艺"}, {"name": "5金兔 Megaways", "category": "电子游艺"}, {"name": "麻将X", "category": "电子游艺"}, {"name": "麻将大胜", "category": "电子游艺"}, {"name": "汪汪之家Megaways", "category": "电子游艺"}, {"name": "迈达斯之手", "category": "电子游艺"}, {"name": "甜心盛宴圣诞", "category": "电子游艺"}, {"name": "赛亚狂热", "category": "电子游艺"}, {"name": "太空人", "category": "电子游艺"}, {"name": "大鲈鱼爆炸", "category": "电子游艺"}, {"name": "金银岛", "category": "电子游艺"}, {"name": "冲上云霄", "category": "电子游艺"}, {"name": "幸运弹珠+", "category": "电子游艺"}, {"name": "掘宝奇兵+", "category": "电子游艺"}, {"name": "Spire+ — 天际之塔+", "category": "电子游艺"}, {"name": "21点之富贵临门", "category": "电子游艺"}, {"name": "美式二十一点", "category": "电子游艺"}, {"name": "龙宝百家乐", "category": "电子游艺"}, {"name": "龙虎斗", "category": "电子游艺"}, {"name": "爱尔兰的魅力", "category": "电子游艺"}, {"name": "永恒钻石3线", "category": "电子游艺"}, {"name": "轮盘", "category": "电子游艺"}, {"name": "热火 100", "category": "电子游艺"}, {"name": "缤纷万千", "category": "电子游艺"}, {"name": "閃亮 热火 100", "category": "电子游艺"}, {"name": "龙虎榜", "category": "电子游艺"}, {"name": "财富高手", "category": "电子游艺"}, {"name": "暴怒猩猩", "category": "电子游艺"}, {"name": "火锅大赢家", "category": "电子游艺"}, {"name": "五狮团拜", "category": "电子游艺"}, {"name": "熊猫麻将", "category": "电子游艺"}, {"name": "麻将大胜 Bonus", "category": "电子游艺"}, {"name": "奇幻无比金钱取款机", "category": "电子游艺"}, {"name": "疯狂大鲈鱼欢乐爆发", "category": "电子游艺"}, {"name": "疯狂大鲈鱼拳击大赛", "category": "电子游艺"}, {"name": "丧尸嘉年华", "category": "电子游艺"}, {"name": "疯狂大鲈鱼", "category": "电子游艺"}, {"name": "疯狂大鲈鱼 - 即刻出动", "category": "电子游艺"}, {"name": "至尊双赢疯狂大鲈鱼", "category": "电子游艺"}, {"name": "疯狂大鲈鱼 亚马逊极限", "category": "电子游艺"}, {"name": "疯狂大鲈鱼摇摇船", "category": "电子游艺"}, {"name": "疯狂大鲈鱼圣诞冰封湖泊", "category": "电子游艺"}, {"name": "疯狂大鲈鱼持控旋转", "category": "电子游艺"}, {"name": "疯狂大鲈鱼持续旋转", "category": "电子游艺"}, {"name": "泡泡糖", "category": "电子游艺"}, {"name": "疯狂大鲈鱼大奖赛", "category": "电子游艺"}, {"name": "疯狂大鲈鱼再出动", "category": "电子游艺"}, {"name": "疯狂大鲈鱼重返竞赛", "category": "电子游艺"}, {"name": "大鲈鱼溅水 1000", "category": "电子游艺"}, {"name": "圣诞疯狂大鲈鱼", "category": "电子游艺"}, {"name": "疯狂大鲈鱼奖杯大丰收", "category": "电子游艺"}, {"name": "汉堡巨无霸", "category": "电子游艺"}, {"name": "疯狂大鲈鱼足球狂欢", "category": "电子游艺"}, {"name": "疯狂大鲈鱼圣诞极限", "category": "电子游艺"}, {"name": "蜂王蜜语", "category": "电子游艺"}, {"name": "疯狂大鲈鱼万圣节", "category": "电子游艺"}, {"name": "疯狂大鲈鱼万圣节2", "category": "电子游艺"}, {"name": "疯狂大鲈鱼万圣节 3", "category": "电子游艺"}, {"name": "阿兹特克国王之书", "category": "电子游艺"}, {"name": "坠落之书", "category": "电子游艺"}, {"name": "黄金叛变", "category": "电子游艺"}, {"name": "王冠之火", "category": "电子游艺"}, {"name": "金龙88", "category": "电子游艺"}, {"name": "圣殿守护者", "category": "电子游艺"}, {"name": "猫魅DJ", "category": "电子游艺"}, {"name": "龙王火锅", "category": "电子游艺"}, {"name": "艳后之神", "category": "电子游艺"}, {"name": "古代埃及", "category": "电子游艺"}, {"name": "古代埃及经典版", "category": "电子游艺"}, {"name": "胜利表情", "category": "电子游艺"}, {"name": "风暴之眼", "category": "电子游艺"}, {"name": "超劲爆免费旋转", "category": "电子游艺"}, {"name": "鱼跃龙门 天空之船", "category": "电子游艺"}, {"name": "鱼跃龙门 – 喜迎蛇年", "category": "电子游艺"}, {"name": "鱼跃龙门 喜迎马年", "category": "电子游艺"}, {"name": "允指回味之Freespins", "category": "电子游艺"}, {"name": "逃脱金字塔 – 火与冰", "category": "电子游艺"}, {"name": "红火暴击", "category": "电子游艺"}, {"name": "红火暴击2", "category": "电子游艺"}, {"name": "埃及鱼之眼", "category": "电子游艺"}, {"name": "鱼跃龙门 持控旋转", "category": "电子游艺"}, {"name": "猫的丰盛财富", "category": "电子游艺"}, {"name": "贪财猪", "category": "电子游艺"}, {"name": "福气鼠", "category": "电子游艺"}, {"name": "领跑者加油", "category": "电子游艺"}, {"name": "额外多汁", "category": "电子游艺"}, {"name": "富贵嘉年华", "category": "电子游艺"}, {"name": "熊猫财富2", "category": "电子游艺"}, {"name": "好运北京", "category": "电子游艺"}, {"name": "财猪农场", "category": "电子游艺"}, {"name": "王者金字塔", "category": "电子游艺"}, {"name": "野狼黄金四块", "category": "电子游艺"}, {"name": "黄金女王", "category": "电子游艺"}, {"name": "裏約之心", "category": "电子游艺"}, {"name": "摇滚银行", "category": "电子游艺"}, {"name": "野生动物园", "category": "电子游艺"}, {"name": "崛起的武士", "category": "电子游艺"}, {"name": "金龟子女王", "category": "电子游艺"}, {"name": "秘咒仪典", "category": "电子游艺"}, {"name": "大堡礁", "category": "电子游艺"}, {"name": "沉睡之龙", "category": "电子游艺"}, {"name": "神秘黄金之城", "category": "电子游艺"}, {"name": "骑士热点", "category": "电子游艺"}, {"name": "武松打虎", "category": "电子游艺"}, {"name": "虎虎生财", "category": "电子游艺"}, {"name": "野狼黄金终极", "category": "电子游艺"}, {"name": "维加斯之夜", "category": "电子游艺"}, {"name": "行尸走肉", "category": "电子游艺"}, {"name": "Wildies – 甜蜜派对", "category": "电子游艺"}, {"name": "法力无边", "category": "电子游艺"}, {"name": "野狼黄金", "category": "电子游艺"}, {"name": "企鹅圣诞派对", "category": "电子游艺"}, {"name": "宾果连珠", "category": "电子游艺"}, {"name": "黄金列车", "category": "电子游艺"}, {"name": "王者野牛", "category": "电子游艺"}, {"name": "神秘的巫师", "category": "电子游艺"}, {"name": "神秘之城", "category": "电子游艺"}, {"name": "大盗反击", "category": "电子游艺"}, {"name": "墨西哥餐厅", "category": "电子游艺"}, {"name": "埃及艳后之眼", "category": "电子游艺"}, {"name": "宇宙现金", "category": "电子游艺"}, {"name": "魔法之壶", "category": "电子游艺"}, {"name": "热火 40", "category": "电子游艺"}, {"name": "彩虹水果", "category": "电子游艺"}, {"name": "锤击风暴", "category": "电子游艺"}, {"name": "极度热火燃烧", "category": "电子游艺"}, {"name": "狂野感染", "category": "电子游艺"}, {"name": "疯狂机器", "category": "电子游艺"}, {"name": "绝境重生", "category": "电子游艺"}, {"name": "夺金海贼", "category": "电子游艺"}, {"name": "黄金海盗加强版", "category": "电子游艺"}, {"name": "彩虹转轴", "category": "电子游艺"}, {"name": "崛起的武士3", "category": "电子游艺"}, {"name": "閃亮 热火 40", "category": "电子游艺"}, {"name": "斯巴达之王", "category": "电子游艺"}, {"name": "甜蜜奖赏", "category": "电子游艺"}, {"name": "街头赛车", "category": "电子游艺"}, {"name": "恶毒魔法", "category": "电子游艺"}, {"name": "深海动物", "category": "电子游艺"}, {"name": "财富打带跑", "category": "电子游艺"}, {"name": "西部牛仔黄金地段", "category": "电子游艺"}, {"name": "刚果财富", "category": "电子游艺"}, {"name": "3个精灵愿望", "category": "电子游艺"}, {"name": "飞龙在天", "category": "电子游艺"}, {"name": "钻石瀑布", "category": "电子游艺"}, {"name": "飞跃龙门 自选大奖", "category": "电子游艺"}, {"name": "小小蟾蜍", "category": "电子游艺"}, {"name": "鬼怪大狂欢！", "category": "电子游艺"}, {"name": "宙斯之子赫拉克勒斯", "category": "电子游艺"}, {"name": "多汁水果多方持控", "category": "电子游艺"}, {"name": "海怪的高额赏金", "category": "电子游艺"}, {"name": "多汁水果", "category": "电子游艺"}, {"name": "无敌金刚", "category": "电子游艺"}, {"name": "埃及神祇", "category": "电子游艺"}, {"name": "北境守护者", "category": "电子游艺"}, {"name": "精灵翅膀", "category": "电子游艺"}, {"name": "狩猎之王", "category": "电子游艺"}, {"name": "北海道之狼", "category": "电子游艺"}, {"name": "爱尔兰人宝藏", "category": "电子游艺"}, {"name": "古时代宝石", "category": "电子游艺"}, {"name": "巴厘之龙", "category": "电子游艺"}, {"name": "疯狂大鲈鱼3轴轮", "category": "电子游艺"}, {"name": "舞龙 热控旋转", "category": "电子游艺"}, {"name": "神龙宝藏雄火之眼", "category": "电子游艺"}, {"name": "热火 5", "category": "电子游艺"}, {"name": "宝石", "category": "电子游艺"}, {"name": "喜马拉雅疯狂", "category": "电子游艺"}, {"name": "热火燃烧暴增", "category": "电子游艺"}, {"name": "热火燃烧", "category": "电子游艺"}, {"name": "果冻糖", "category": "电子游艺"}, {"name": "百搭小丑珠宝", "category": "电子游艺"}, {"name": "复仇小丑赢大奖", "category": "电子游艺"}, {"name": "女神弗蕾雅Megaways", "category": "电子游艺"}, {"name": "英雄联盟 Megaways", "category": "电子游艺"}, {"name": "洛基复仇Megaways", "category": "电子游艺"}, {"name": "幸运捕鱼 Megaways", "category": "电子游艺"}, {"name": "命运女巫Megaways", "category": "电子游艺"}, {"name": "麻将大胜 - 恭喜发财", "category": "电子游艺"}, {"name": "麻将大胜2", "category": "电子游艺"}, {"name": "麻将大胜三宝壶", "category": "电子游艺"}, {"name": "疯狂谷仓 Megaways", "category": "电子游艺"}, {"name": "庞贝古城 Megareels Megaways", "category": "电子游艺"}, {"name": "相扑力士", "category": "电子游艺"}, {"name": "黄金老矿工Megaways", "category": "电子游艺"}, {"name": "东方的奥秘", "category": "电子游艺"}, {"name": "努尔先生的邪恶宝藏", "category": "电子游艺"}, {"name": "3舞蹈猴子", "category": "电子游艺"}, {"name": "狼人的诅咒Megaways", "category": "电子游艺"}, {"name": "吸血鬼派对", "category": "电子游艺"}, {"name": "火山女神", "category": "电子游艺"}, {"name": "牛仔金币", "category": "电子游艺"}, {"name": "约翰亨特之图特之书 Megaways", "category": "电子游艺"}, {"name": "三钻壶", "category": "电子游艺"}, {"name": "意式腊香肠比萨", "category": "电子游艺"}, {"name": "森林大冒险", "category": "电子游艺"}, {"name": "星光闪耀", "category": "电子游艺"}, {"name": "糖果星星", "category": "电子游艺"}, {"name": "阿兹特克财宝", "category": "电子游艺"}, {"name": "热火暴走", "category": "电子游艺"}, {"name": "矮人和龙", "category": "电子游艺"}, {"name": "超级瑟吉", "category": "电子游艺"}, {"name": "阳光疗养院赢大奖", "category": "电子游艺"}, {"name": "7幸运草", "category": "电子游艺"}, {"name": "海洋幻想", "category": "电子游艺"}, {"name": "萨凡纳传奇", "category": "电子游艺"}, {"name": "疗养院的秘密", "category": "电子游艺"}, {"name": "崛起的武士 Megaways", "category": "电子游艺"}, {"name": "狂野名人大巴 Megaways", "category": "电子游艺"}, {"name": "火箭冲天财富", "category": "电子游艺"}, {"name": "火箭发射 Megaways", "category": "电子游艺"}, {"name": "暴富快活", "category": "电子游艺"}, {"name": "宙斯 vs 堤丰", "category": "电子游艺"}, {"name": "红桃王后", "category": "电子游艺"}, {"name": "极地财富", "category": "电子游艺"}, {"name": "法力梅林Megaways", "category": "电子游艺"}, {"name": "丧尸学园", "category": "电子游艺"}, {"name": "三珠壶大力士", "category": "电子游艺"}, {"name": "比萨！比萨？比萨！", "category": "电子游艺"}, {"name": "狂暴珍珠", "category": "电子游艺"}, {"name": "黄金老矿工Megaways", "category": "电子游艺"}, {"name": "努尔先生的邪恶宝藏", "category": "电子游艺"}, {"name": "东方的奥秘", "category": "电子游艺"}, {"name": "3舞蹈猴子", "category": "电子游艺"}, {"name": "大富豪Megaways", "category": "电子游艺"}, {"name": "远古岛", "category": "电子游艺"}, {"name": "猛烈瀑布", "category": "电子游艺"}, {"name": "古墓秘宝", "category": "电子游艺"}, {"name": "女神弗蕾雅Megaways", "category": "电子游艺"}, {"name": "相扑力士", "category": "电子游艺"}, {"name": "庞贝古城 Megareels Megaways", "category": "电子游艺"}, {"name": "疯狂谷仓 Megaways", "category": "电子游艺"}, {"name": "麻将大胜三宝壶", "category": "电子游艺"}, {"name": "麻将大胜2", "category": "电子游艺"}, {"name": "麻将大胜 - 恭喜发财", "category": "电子游艺"}, {"name": "命运女巫Megaways", "category": "电子游艺"}, {"name": "幸运捕鱼 Megaways", "category": "电子游艺"}, {"name": "洛基复仇Megaways", "category": "电子游艺"}, {"name": "英雄联盟 Megaways", "category": "电子游艺"}, {"name": "一喵百赢Megaways", "category": "电子游艺"}, {"name": "幸运雷神", "category": "电子游艺"}, {"name": "烈焰熔岩", "category": "电子游艺"}, {"name": "埃及艳后宝藏", "category": "电子游艺"}, {"name": "解放大海怪", "category": "电子游艺"}, {"name": "热带提基", "category": "电子游艺"}, {"name": "星光公主帕奇", "category": "电子游艺"}, {"name": "黄金绿洲", "category": "电子游艺"}, {"name": "龙虎财运", "category": "电子游艺"}, {"name": "星际赏金", "category": "电子游艺"}, {"name": "金字塔崛起", "category": "电子游艺"}, {"name": "雷神之锤 Megaways", "category": "电子游艺"}, {"name": "黄金野马", "category": "电子游艺"}, {"name": "奥丁之怒 Megaways", "category": "电子游艺"}, {"name": "冰冻热带", "category": "电子游艺"}, {"name": "旋转及射龙门Megaways", "category": "电子游艺"}, {"name": "永恒女皇", "category": "电子游艺"}, {"name": "蛙群家族", "category": "电子游艺"}, {"name": "財富高手超级闪耀", "category": "电子游艺"}, {"name": "鱼跃龙门贺新年Megaways", "category": "电子游艺"}, {"name": "鱼跃龙门 Megaways", "category": "电子游艺"}, {"name": "热火燎原 Megaways", "category": "电子游艺"}, {"name": "恐龙彩蛋", "category": "电子游艺"}, {"name": "超级辣", "category": "电子游艺"}, {"name": "宝石三重奏", "category": "电子游艺"}, {"name": "陈师傅的财富", "category": "电子游艺"}, {"name": "古时代宝石 加强版", "category": "电子游艺"}, {"name": "西游争霸", "category": "电子游艺"}, {"name": "冰球竞赛", "category": "电子游艺"}, {"name": "7只小猪", "category": "电子游艺"}, {"name": "7只猴子", "category": "电子游艺"}, {"name": "奇异之愿", "category": "电子游艺"}, {"name": "88火", "category": "电子游艺"}, {"name": "阿兹特克秘宝", "category": "电子游艺"}, {"name": "阿兹特克获利之道", "category": "电子游艺"}, {"name": "贵妃美人", "category": "电子游艺"}, {"name": "布洛克精神", "category": "电子游艺"}, {"name": "777疾风轮盘", "category": "电子游艺"}, {"name": "招财蛙", "category": "电子游艺"}, {"name": "超级燃烧", "category": "电子游艺"}, {"name": "超级持控旋转", "category": "电子游艺"}, {"name": "富贵888", "category": "电子游艺"}, {"name": "龙龙龙", "category": "电子游艺"}, {"name": "超级提基冲击", "category": "电子游艺"}, {"name": "旺福狗", "category": "电子游艺"}, {"name": "幸运骰子", "category": "电子游艺"}, {"name": "幸运财富树", "category": "电子游艺"}, {"name": "优质宝石 持控旋转", "category": "电子游艺"}, {"name": "灵猴招福", "category": "电子游艺"}, {"name": "迈达斯之手 2", "category": "电子游艺"}, {"name": "采矿热", "category": "电子游艺"}, {"name": "极速悟空", "category": "电子游艺"}, {"name": "海公主藏珍阁", "category": "电子游艺"}, {"name": "大啖甜瓜", "category": "电子游艺"}, {"name": "麻糬宝贝", "category": "电子游艺"}, {"name": "狂野蹦跳青蛙", "category": "电子游艺"}, {"name": "海盗黄金时代", "category": "电子游艺"}, {"name": "墨西哥亡灵节 Megaways", "category": "电子游艺"}, {"name": "炼狱屠戮王", "category": "电子游艺"}, {"name": "黄金之轮", "category": "电子游艺"}, {"name": "黄金三叶草", "category": "电子游艺"}, {"name": "阿拉伯之梦", "category": "电子游艺"}, {"name": "尼罗河财富", "category": "电子游艺"}, {"name": "武力忍者", "category": "电子游艺"}, {"name": "十月啤酒嘉年华", "category": "电子游艺"}, {"name": "印尼传奇迦多铎卡超级闪耀", "category": "电子游艺"}, {"name": "奥林匹斯之门骰子", "category": "电子游艺"}, {"name": "奥林匹斯财富", "category": "电子游艺"}, {"name": "奥林匹斯之门超神力", "category": "电子游艺"}, {"name": "七福海神", "category": "电子游艺"}, {"name": "奥林匹斯之门圣诞1000", "category": "电子游艺"}, {"name": "黄金神谕", "category": "电子游艺"}, {"name": "果冻极速快线", "category": "电子游艺"}, {"name": "疯狂金字塔", "category": "电子游艺"}, {"name": "霹雳凤凰", "category": "电子游艺"}, {"name": "小猪银行家", "category": "电子游艺"}, {"name": "西部牛仔对决", "category": "电子游艺"}, {"name": "阿兹特克猛击", "category": "电子游艺"}, {"name": "冰薄荷", "category": "电子游艺"}, {"name": "圣诞惊喜礼物", "category": "电子游艺"}, {"name": "火焰之界", "category": "电子游艺"}, {"name": "神鼠", "category": "电子游艺"}, {"name": "夺心女神狂赢夜", "category": "电子游艺"}, {"name": "雅典娜的智慧", "category": "电子游艺"}, {"name": "雅典娜的智慧圣诞 1000", "category": "电子游艺"}, {"name": "黄金彩虹", "category": "电子游艺"}, {"name": "极速圣诞快乐", "category": "电子游艺"}, {"name": "巨大犀牛", "category": "电子游艺"}, {"name": "巨大犀牛 加强版", "category": "电子游艺"}, {"name": "石头族赌城", "category": "电子游艺"}, {"name": "水果沙拉盛宴", "category": "电子游艺"}, {"name": "圣诞老人", "category": "电子游艺"}, {"name": "圣诞仙境", "category": "电子游艺"}, {"name": "阿兹特克 Powernudge", "category": "电子游艺"}, {"name": "星光圣诞系列", "category": "电子游艺"}, {"name": "閃亮 热火 20", "category": "电子游艺"}, {"name": "烈焰之门", "category": "电子游艺"}, {"name": "英雄旋转", "category": "电子游艺"}, {"name": "骑士之王", "category": "电子游艺"}, {"name": "偶像音浪狂热", "category": "电子游艺"}, {"name": "走私者海湾", "category": "电子游艺"}, {"name": "斯巴达之盾", "category": "电子游艺"}, {"name": "战矛之王", "category": "电子游艺"}, {"name": "魔法的奥秘", "category": "电子游艺"}, {"name": "星光弓箭手 1000", "category": "电子游艺"}, {"name": "星光公主超级闪耀", "category": "电子游艺"}, {"name": "幸运之壶", "category": "电子游艺"}, {"name": "急冻龙虾", "category": "电子游艺"}, {"name": "城市大盗", "category": "电子游艺"}, {"name": "野牛冲锋", "category": "电子游艺"}, {"name": "维京锻造", "category": "电子游艺"}, {"name": "顶级糖果Powernudge", "category": "电子游艺"}, {"name": "维纳斯女神之心", "category": "电子游艺"}, {"name": "极速糖果超级闪耀", "category": "电子游艺"}, {"name": "怪物超人", "category": "电子游艺"}, {"name": "超级X", "category": "电子游艺"}, {"name": "甜入心扉 2500", "category": "电子游艺"}, {"name": "甜入心扉 超级闪耀", "category": "电子游艺"}, {"name": "希腊战神之剑", "category": "电子游艺"}, {"name": "甜心糖果大富翁", "category": "电子游艺"}, {"name": "现金升降机", "category": "电子游艺"}, {"name": "摩天大楼", "category": "电子游艺"}, {"name": "印加女王传说", "category": "电子游艺"}, {"name": "招财树", "category": "电子游艺"}, {"name": "疯狂宝藏", "category": "电子游艺"}, {"name": "黑公牛", "category": "电子游艺"}, {"name": "阿兹特克秘宝狩猎", "category": "电子游艺"}, {"name": "禽鸟之屋", "category": "电子游艺"}, {"name": "终极之5", "category": "电子游艺"}, {"name": "伦敦地铁", "category": "电子游艺"}, {"name": "魔力维加斯", "category": "电子游艺"}, {"name": "百搭加强器", "category": "电子游艺"}, {"name": "百搭超人星际战士", "category": "电子游艺"}, {"name": "喧闹虫虫", "category": "电子游艺"}, {"name": "野精灵", "category": "电子游艺"}, {"name": "野狼与小猪", "category": "电子游艺"}, {"name": "冥神阿努比斯之怒", "category": "电子游艺"}, {"name": "西部牛仔炽热赏金", "category": "电子游艺"}, {"name": "圣诞颂歌 Megaways", "category": "电子游艺"}, {"name": "圣雄李舜臣", "category": "电子游艺"}, {"name": "龙王之年", "category": "电子游艺"}, {"name": "财神运财", "category": "电子游艺"}, {"name": "牛转钱坤", "category": "电子游艺"}, {"name": "调皮的皇帝", "category": "电子游艺"}, {"name": "跳舞趴", "category": "电子游艺"}, {"name": "迪斯科女士", "category": "电子游艺"}, {"name": "财神驾到", "category": "电子游艺"}, {"name": "神龙运财", "category": "电子游艺"}, {"name": "希腊众神", "category": "电子游艺"}, {"name": "财神黄金", "category": "电子游艺"}, {"name": "888富矿", "category": "电子游艺"}, {"name": "招财锦鲤", "category": "电子游艺"}, {"name": "5雄狮", "category": "电子游艺"}, {"name": "5金狮", "category": "电子游艺"}, {"name": "酷猴战士", "category": "电子游艺"}, {"name": "野蛮恶魔", "category": "电子游艺"}, {"name": "女王", "category": "电子游艺"}, {"name": "热火弓箭手", "category": "电子游艺"}, {"name": "仙宫", "category": "电子游艺"}, {"name": "阿茲特克国王", "category": "电子游艺"}, {"name": "徽章闪电", "category": "电子游艺"}, {"name": "圣书帝国", "category": "电子游艺"}, {"name": "轰炸富矿", "category": "电子游艺"}, {"name": "魔法森林寻宝", "category": "电子游艺"}, {"name": "赏金猎人", "category": "电子游艺"}, {"name": "斗牛嘉年华", "category": "电子游艺"}, {"name": "财神聚宝盒2", "category": "电子游艺"}, {"name": "财神聚宝盒", "category": "电子游艺"}, {"name": "火辣辣", "category": "电子游艺"}, {"name": "巡逻现警", "category": "电子游艺"}, {"name": "达芬奇宝藏", "category": "电子游艺"}, {"name": "龙之国度", "category": "电子游艺"}, {"name": "矮人黄金豪华版", "category": "电子游艺"}, {"name": "狂野角斗士", "category": "电子游艺"}, {"name": "鸿运你最牛", "category": "电子游艺"}, {"name": "黄金派对", "category": "电子游艺"}, {"name": "黄金派对2之狂欢", "category": "电子游艺"}, {"name": "招财福猪", "category": "电子游艺"}, {"name": "金矿特快车", "category": "电子游艺"}, {"name": "淘金热", "category": "电子游艺"}, {"name": "兜风假期", "category": "电子游艺"}, {"name": "狂热嘉年华", "category": "电子游艺"}, {"name": "小丑王国", "category": "电子游艺"}, {"name": "小丑赛跑", "category": "电子游艺"}, {"name": "西游记", "category": "电子游艺"}, {"name": "阿茲特克火焰", "category": "电子游艺"}, {"name": "三国", "category": "电子游艺"}, {"name": "大泻湖", "category": "电子游艺"}, {"name": "疯狂好运酒吧 2", "category": "电子游艺"}, {"name": "疯狂好运酒吧", "category": "电子游艺"}, {"name": "招财鼠", "category": "电子游艺"}, {"name": "黄金野马", "category": "电子游艺"}, {"name": "幸运新年", "category": "电子游艺"}, {"name": "熊猫财富", "category": "电子游艺"}, {"name": "熊猫财富2", "category": "电子游艺"}, {"name": "好运北京", "category": "电子游艺"}, {"name": "财猪农场", "category": "电子游艺"}, {"name": "王者金字塔", "category": "电子游艺"}, {"name": "野狼黄金四块", "category": "电子游艺"}, {"name": "黄金女王", "category": "电子游艺"}, {"name": "裏約之心", "category": "电子游艺"}, {"name": "摇滚银行", "category": "电子游艺"}, {"name": "野生动物园", "category": "电子游艺"}, {"name": "崛起的武士", "category": "电子游艺"}, {"name": "金龟子女王", "category": "电子游艺"}, {"name": "秘咒仪典", "category": "电子游艺"}, {"name": "大堡礁", "category": "电子游艺"}, {"name": "沉睡之龙", "category": "电子游艺"}, {"name": "神秘黄金之城", "category": "电子游艺"}, {"name": "骑士热点", "category": "电子游艺"}, {"name": "武松打虎", "category": "电子游艺"}, {"name": "虎虎生财", "category": "电子游艺"}, {"name": "野狼黄金终极", "category": "电子游艺"}, {"name": "维加斯之夜", "category": "电子游艺"}, {"name": "行尸走肉", "category": "电子游艺"}, {"name": "Wildies – 甜蜜派对", "category": "电子游艺"}, {"name": "法力无边", "category": "电子游艺"}, {"name": "野狼黄金", "category": "电子游艺"}, {"name": "企鹅圣诞派对", "category": "电子游艺"}, {"name": "宾果连珠", "category": "电子游艺"}, {"name": "黄金列车", "category": "电子游艺"}, {"name": "王者野牛", "category": "电子游艺"}, {"name": "神秘的巫师", "category": "电子游艺"}, {"name": "神秘之城", "category": "电子游艺"}, {"name": "大盗反击", "category": "电子游艺"}, {"name": "墨西哥餐厅", "category": "电子游艺"}, {"name": "埃及艳后之眼", "category": "电子游艺"}, {"name": "宇宙现金", "category": "电子游艺"}, {"name": "魔法之壶", "category": "电子游艺"}, {"name": "热火 40", "category": "电子游艺"}, {"name": "彩虹水果", "category": "电子游艺"}, {"name": "锤击风暴", "category": "电子游艺"}, {"name": "极度热火燃烧", "category": "电子游艺"}, {"name": "狂野感染", "category": "电子游艺"}, {"name": "疯狂机器", "category": "电子游艺"}, {"name": "绝境重生", "category": "电子游艺"}, {"name": "夺金海贼", "category": "电子游艺"}, {"name": "黄金海盗加强版", "category": "电子游艺"}, {"name": "彩虹转轴", "category": "电子游艺"}, {"name": "崛起的武士3", "category": "电子游艺"}, {"name": "閃亮 热火 40", "category": "电子游艺"}, {"name": "斯巴达之王", "category": "电子游艺"}, {"name": "甜蜜奖赏", "category": "电子游艺"}, {"name": "街头赛车", "category": "电子游艺"}, {"name": "恶毒魔法", "category": "电子游艺"}, {"name": "深海动物", "category": "电子游艺"}, {"name": "财富打带跑", "category": "电子游艺"}, {"name": "西部牛仔黄金地段", "category": "电子游艺"}, {"name": "刚果财富", "category": "电子游艺"}, {"name": "3个精灵愿望", "category": "电子游艺"}, {"name": "飞龙在天", "category": "电子游艺"}, {"name": "钻石瀑布", "category": "电子游艺"}, {"name": "飞跃龙门 自选大奖", "category": "电子游艺"}, {"name": "小小蟾蜍", "category": "电子游艺"}, {"name": "鬼怪大狂欢！", "category": "电子游艺"}, {"name": "宙斯之子赫拉克勒斯", "category": "电子游艺"}, {"name": "多汁水果多方持控", "category": "电子游艺"}, {"name": "海怪的高额赏金", "category": "电子游艺"}, {"name": "多汁水果", "category": "电子游艺"}, {"name": "无敌金刚", "category": "电子游艺"}, {"name": "埃及神祇", "category": "电子游艺"}, {"name": "北境守护者", "category": "电子游艺"}, {"name": "精灵翅膀", "category": "电子游艺"}, {"name": "狩猎之王", "category": "电子游艺"}, {"name": "北海道之狼", "category": "电子游艺"}, {"name": "爱尔兰人宝藏", "category": "电子游艺"}, {"name": "古时代宝石", "category": "电子游艺"}, {"name": "巴厘之龙", "category": "电子游艺"}, {"name": "疯狂大鲈鱼3轴轮", "category": "电子游艺"}, {"name": "舞龙 热控旋转", "category": "电子游艺"}, {"name": "神龙宝藏雄火之眼", "category": "电子游艺"}, {"name": "热火 5", "category": "电子游艺"}, {"name": "宝石", "category": "电子游艺"}, {"name": "喜马拉雅疯狂", "category": "电子游艺"}, {"name": "热火燃烧暴增", "category": "电子游艺"}, {"name": "热火燃烧", "category": "电子游艺"}, {"name": "果冻糖", "category": "电子游艺"}, {"name": "百搭小丑珠宝", "category": "电子游艺"}, {"name": "复仇小丑赢大奖", "category": "电子游艺"}, {"name": "小丑珠宝", "category": "电子游艺"}, {"name": "小丑珠宝骰子", "category": "电子游艺"}, {"name": "小丑珠宝现金", "category": "电子游艺"}, {"name": "小丑珠宝持控旋转", "category": "电子游艺"}, {"name": "熊猫福星", "category": "电子游艺"}, {"name": "优质宝石 持控旋转", "category": "电子游艺"}, {"name": "幸运骰子", "category": "电子游艺"}, {"name": "幸运财富树", "category": "电子游艺"}, {"name": "旺福狗", "category": "电子游艺"}, {"name": "灵猴招福", "category": "电子游艺"}, {"name": "福虎生财 1000", "category": "电子游艺"}, {"name": "福虎生财", "category": "电子游艺"}, {"name": "幸运三跳蛙", "category": "电子游艺"}, {"name": "图特宝藏之塔", "category": "电子游艺"}, {"name": "6小丑", "category": "电子游艺"}, {"name": "閃亮 热火 5", "category": "电子游艺"}, {"name": "超炫小丑", "category": "电子游艺"}, {"name": "开罗法典", "category": "电子游艺"}, {"name": "火热闪烁5", "category": "电子游艺"}, {"name": "超级7s", "category": "电子游艺"}, {"name": "熊软糖能量弹", "category": "电子游艺"}, {"name": "777疾速", "category": "电子游艺"}, {"name": "恐龙彩蛋", "category": "电子游艺"}, {"name": "超级提基冲击", "category": "电子游艺"}, {"name": "龙龙龙", "category": "电子游艺"}, {"name": "富贵888", "category": "电子游艺"}, {"name": "超级持控旋转", "category": "电子游艺"}, {"name": "超级燃烧", "category": "电子游艺"}, {"name": "招财蛙", "category": "电子游艺"}, {"name": "777疾风轮盘", "category": "电子游艺"}, {"name": "布洛克精神", "category": "电子游艺"}, {"name": "贵妃美人", "category": "电子游艺"}, {"name": "阿兹特克获利之道", "category": "电子游艺"}, {"name": "阿兹特克秘宝", "category": "电子游艺"}, {"name": "88火", "category": "电子游艺"}, {"name": "奇异之愿", "category": "电子游艺"}, {"name": "7只猴子", "category": "电子游艺"}, {"name": "7只小猪", "category": "电子游艺"}, {"name": "冰球竞赛", "category": "电子游艺"}, {"name": "西游争霸", "category": "电子游艺"}, {"name": "古时代宝石 加强版", "category": "电子游艺"}, {"name": "陈师傅的财富", "category": "电子游艺"}, {"name": "宝石三重奏", "category": "电子游艺"}, {"name": "超级辣", "category": "电子游艺"}, {"name": "猴子疯狂", "category": "电子游艺"}, {"name": "海盗酒吧", "category": "电子游艺"}, {"name": "百万$小猪", "category": "电子游艺"}, {"name": "财神聚宝盆", "category": "电子游艺"}, {"name": "5金狮Megaways™ 2", "category": "电子游艺"}, {"name": "5金狮重生", "category": "电子游艺"}, {"name": "巨蟒秘宝", "category": "电子游艺"}, {"name": "双面特务", "category": "电子游艺"}, {"name": "机甲战队", "category": "电子游艺"}, {"name": "阿尔戈英雄", "category": "电子游艺"}, {"name": "三金壶", "category": "电子游艺"}, {"name": "古时代宝石Megaways™", "category": "电子游艺"}, {"name": "阿兹特克之宝", "category": "电子游艺"}, {"name": "阿兹特克国王Megaways", "category": "电子游艺"}, {"name": "暴徒Megaways™", "category": "电子游艺"}, {"name": "水果银行", "category": "电子游艺"}, {"name": "谷仓狂想曲", "category": "电子游艺"}, {"name": "疯狂大鲈鱼 Megaways", "category": "电子游艺"}, {"name": "疯狂大鲈鱼持控旋转Megaways", "category": "电子游艺"}, {"name": "金银闪电Megaways™", "category": "电子游艺"}, {"name": "小心深海Megaways", "category": "电子游艺"}, {"name": "谷仓大丰收狂欢", "category": "电子游艺"}, {"name": "王者野牛奔放", "category": "电子游艺"}, {"name": "萌宠狂欢Megaways", "category": "电子游艺"}, {"name": "埃及金沙之书", "category": "电子游艺"}, {"name": "财富堆砌", "category": "电子游艺"}, {"name": "狂野羚羊大胜", "category": "电子游艺"}, {"name": "现金暴增", "category": "电子游艺"}, {"name": "追逐荣光", "category": "电子游艺"}, {"name": "5冰冻魅力Megaways", "category": "电子游艺"}, {"name": "娱乐场大劫案 Megaways", "category": "电子游艺"}, {"name": "超级辣椒 Megaways", "category": "电子游艺"}, {"name": "克拉肯船长Megaways", "category": "电子游艺"}, {"name": "火鸟精神", "category": "电子游艺"}, {"name": "刚果财富 XL", "category": "电子游艺"}, {"name": "水晶洞穴Megaways", "category": "电子游艺"}, {"name": "狂野骷髅", "category": "电子游艺"}, {"name": "赛博夺宝城", "category": "电子游艺"}, {"name": "赛博萌犬", "category": "电子游艺"}, {"name": "汪汪之家 Megaways 1000", "category": "电子游艺"}, {"name": "神龙火壶Megaways", "category": "电子游艺"}, {"name": "五行宝石 Megaways", "category": "电子游艺"}, {"name": "埃及钻石", "category": "电子游艺"}, {"name": "烈火城堡", "category": "电子游艺"}, {"name": "热火暴走 2 狂野连击", "category": "电子游艺"}, {"name": "热火燎原 Megaways", "category": "电子游艺"}, {"name": "鱼跃龙门 Megaways", "category": "电子游艺"}, {"name": "鱼跃龙门贺新年Megaways", "category": "电子游艺"}, {"name": "財富高手超级闪耀", "category": "电子游艺"}, {"name": "蛙群家族", "category": "电子游艺"}, {"name": "永恒女皇", "category": "电子游艺"}, {"name": "旋转及射龙门Megaways", "category": "电子游艺"}, {"name": "冰冻热带", "category": "电子游艺"}, {"name": "奥丁之怒 Megaways", "category": "电子游艺"}, {"name": "黄金野马", "category": "电子游艺"}, {"name": "雷神之锤 Megaways", "category": "电子游艺"}, {"name": "金字塔崛起", "category": "电子游艺"}, {"name": "星际赏金", "category": "电子游艺"}, {"name": "龙虎财运", "category": "电子游艺"}, {"name": "黄金绿洲", "category": "电子游艺"}, {"name": "星光公主帕奇", "category": "电子游艺"}, {"name": "热带提基", "category": "电子游艺"}, {"name": "解放大海怪", "category": "电子游艺"}, {"name": "埃及艳后宝藏", "category": "电子游艺"}, {"name": "烈焰熔岩", "category": "电子游艺"}, {"name": "幸运雷神", "category": "电子游艺"}, {"name": "一喵百赢Megaways", "category": "电子游艺"}, {"name": "英雄联盟 Megaways", "category": "电子游艺"}, {"name": "洛基复仇Megaways", "category": "电子游艺"}, {"name": "幸运捕鱼 Megaways", "category": "电子游艺"}, {"name": "命运女巫Megaways", "category": "电子游艺"}, {"name": "麻将大胜 - 恭喜发财", "category": "电子游艺"}, {"name": "麻将大胜2", "category": "电子游艺"}, {"name": "麻将大胜三宝壶", "category": "电子游艺"}, {"name": "疯狂谷仓 Megaways", "category": "电子游艺"}, {"name": "庞贝古城 Megareels Megaways", "category": "电子游艺"}, {"name": "相扑力士", "category": "电子游艺"}, {"name": "女神弗蕾雅Megaways", "category": "电子游艺"}, {"name": "古墓秘宝", "category": "电子游艺"}, {"name": "猛烈瀑布", "category": "电子游艺"}, {"name": "远古岛", "category": "电子游艺"}, {"name": "大富豪Megaways", "category": "电子游艺"}, {"name": "3舞蹈猴子", "category": "电子游艺"}, {"name": "东方的奥秘", "category": "电子游艺"}, {"name": "努尔先生的邪恶宝藏", "category": "电子游艺"}, {"name": "黄金老矿工Megaways", "category": "电子游艺"}, {"name": "狂暴珍珠", "category": "电子游艺"}, {"name": "比萨！比萨？比萨！", "category": "电子游艺"}, {"name": "三珠壶大力士", "category": "电子游艺"}, {"name": "丧尸学园", "category": "电子游艺"}, {"name": "法力梅林Megaways", "category": "电子游艺"}, {"name": "极地财富", "category": "电子游艺"}, {"name": "红桃王后", "category": "电子游艺"}, {"name": "宙斯 vs 堤丰", "category": "电子游艺"}, {"name": "暴富快活", "category": "电子游艺"}, {"name": "火箭发射 Megaways", "category": "电子游艺"}, {"name": "火箭冲天财富", "category": "电子游艺"}, {"name": "狂野名人大巴 Megaways", "category": "电子游艺"}, {"name": "崛起的武士 Megaways", "category": "电子游艺"}, {"name": "疗养院的秘密", "category": "电子游艺"}, {"name": "萨凡纳传奇", "category": "电子游艺"}, {"name": "海洋幻想", "category": "电子游艺"}, {"name": "7幸运草", "category": "电子游艺"}, {"name": "阳光疗养院赢大奖", "category": "电子游艺"}, {"name": "超级瑟吉", "category": "电子游艺"}, {"name": "矮人和龙", "category": "电子游艺"}, {"name": "热火暴走", "category": "电子游艺"}, {"name": "阿兹特克财宝", "category": "电子游艺"}, {"name": "糖果星星", "category": "电子游艺"}, {"name": "星光闪耀", "category": "电子游艺"}, {"name": "森林大冒险", "category": "电子游艺"}, {"name": "意式腊香肠比萨", "category": "电子游艺"}, {"name": "三钻壶", "category": "电子游艺"}, {"name": "约翰亨特之图特之书 Megaways", "category": "电子游艺"}, {"name": "牛仔金币", "category": "电子游艺"}, {"name": "火山女神", "category": "电子游艺"}, {"name": "吸血鬼派对", "category": "电子游艺"}, {"name": "狼人的诅咒Megaways", "category": "电子游艺"}, {"name": "神秘的酋长", "category": "电子游艺"}, {"name": "血色黎明", "category": "电子游艺"}, {"name": "魔女之心Megaways™", "category": "电子游艺"}, {"name": "幸运欢乐轮", "category": "电子游艺"}, {"name": "野蛮帮派", "category": "电子游艺"}, {"name": "西部牛仔黄金地段 Megaways", "category": "电子游艺"}, {"name": "狂野美味香蕉", "category": "电子游艺"}, {"name": "超狂野小丑", "category": "电子游艺"}, {"name": "爱尔兰人宝藏 Megaways", "category": "电子游艺"}, {"name": "爱尔兰人宝藏归来", "category": "电子游艺"}, {"name": "额外多汁Megaways", "category": "电子游艺"}, {"name": "昼夜大对决", "category": "电子游艺"}, {"name": "可口好吃 Powerways", "category": "电子游艺"}, {"name": "丧尸嘉年华", "category": "电子游艺"}], "EVO视讯": [{"name": "EVO视讯", "category": "真人视讯"}], "PG": [{"name": "麻将胡了2", "category": "电子游艺"}, {"name": "赏金大对决", "category": "电子游艺"}, {"name": "招财喵", "category": "电子游艺"}, {"name": "寻宝黄金城", "category": "电子游艺"}, {"name": "麻将胡了", "category": "电子游艺"}, {"name": "恐龙帝国", "category": "电子游艺"}, {"name": "黄金摇钱树", "category": "电子游艺"}, {"name": "十倍金牛", "category": "电子游艺"}, {"name": "炼金工坊", "category": "电子游艺"}, {"name": "极速赢家", "category": "电子游艺"}, {"name": "疯赚过山车", "category": "电子游艺"}, {"name": "珀尔修斯传奇", "category": "电子游艺"}, {"name": "夜醉佳人", "category": "电子游艺"}, {"name": "寻龙探宝", "category": "电子游艺"}, {"name": "亡灵大盗", "category": "电子游艺"}, {"name": "电玩金猪", "category": "电子游艺"}, {"name": "神鹰宝石", "category": "电子游艺"}, {"name": "美食美刻", "category": "电子游艺"}, {"name": "蝶恋花", "category": "电子游艺"}, {"name": "澳门壕梦", "category": "电子游艺"}, {"name": "江山美景图", "category": "电子游艺"}, {"name": "超市大血拼", "category": "电子游艺"}, {"name": "爱尔兰精灵", "category": "电子游艺"}, {"name": "韩宫御宴", "category": "电子游艺"}, {"name": "水上泰神奇", "category": "电子游艺"}, {"name": "霹雳神偷", "category": "电子游艺"}, {"name": "冰雪大冲关", "category": "电子游艺"}, {"name": "埃及探秘宝典", "category": "电子游艺"}, {"name": "凤凰传奇", "category": "电子游艺"}, {"name": "日月星辰", "category": "电子游艺"}, {"name": "福运象财神", "category": "电子游艺"}, {"name": "赢财神", "category": "电子游艺"}, {"name": "糖心风暴", "category": "电子游艺"}, {"name": "太阳神传说", "category": "电子游艺"}, {"name": "人鱼公主", "category": "电子游艺"}, {"name": "麒麟送宝", "category": "电子游艺"}, {"name": "美猴王传奇", "category": "电子游艺"}, {"name": "美洲野牛", "category": "电子游艺"}, {"name": "丽影奇兵之探秘埃及", "category": "电子游艺"}, {"name": "假面嘉年华", "category": "电子游艺"}, {"name": "百鬼夜行", "category": "电子游艺"}, {"name": "绝地大逃杀", "category": "电子游艺"}, {"name": "虎虎生财", "category": "电子游艺"}, {"name": "发财鱼虾蟹", "category": "电子游艺"}, {"name": "图腾奇迹", "category": "电子游艺"}, {"name": "维京纪元", "category": "电子游艺"}, {"name": "寻龙探宝2", "category": "电子游艺"}, {"name": "皇家游轮", "category": "电子游艺"}, {"name": "金球射手", "category": "电子游艺"}, {"name": "猿宇宙#3258", "category": "电子游艺"}, {"name": "忍者小浣熊", "category": "电子游艺"}, {"name": "金钱兔", "category": "电子游艺"}, {"name": "铸造大师", "category": "电子游艺"}, {"name": "怪盗神偷", "category": "电子游艺"}, {"name": "阿努比斯", "category": "电子游艺"}, {"name": "丧尸危机", "category": "电子游艺"}, {"name": "鲨鱼猎手", "category": "电子游艺"}, {"name": "真爱巧克力", "category": "电子游艺"}, {"name": "宝石矿工", "category": "电子游艺"}, {"name": "快钱来了", "category": "电子游艺"}, {"name": "金龙送宝", "category": "电子游艺"}, {"name": "艺伎之刃", "category": "电子游艺"}, {"name": "魔法药水", "category": "电子游艺"}, {"name": "三只疯狂小猪", "category": "电子游艺"}, {"name": "南美之翼", "category": "电子游艺"}, {"name": "世界珍宝馆", "category": "电子游艺"}, {"name": "极道荣耀", "category": "电子游艺"}, {"name": "热血足球", "category": "电子游艺"}, {"name": "里约嘉年华", "category": "电子游艺"}, {"name": "宝藏大冒险", "category": "电子游艺"}, {"name": "美食夏日祭", "category": "电子游艺"}, {"name": "印加奇迹", "category": "电子游艺"}, {"name": "宝藏船说", "category": "电子游艺"}, {"name": "金蛇招财", "category": "电子游艺"}, {"name": "拳击玫瑰", "category": "电子游艺"}, {"name": "寻龙宝藏", "category": "电子游艺"}, {"name": "格林赏金：糖果巫", "category": "电子游艺"}, {"name": "银河宝藏", "category": "电子游艺"}, {"name": "海怪传说", "category": "电子游艺"}, {"name": "芝麻开门", "category": "电子游艺"}, {"name": "地狱狂响", "category": "电子游艺"}, {"name": "法老牌", "category": "电子游艺"}, {"name": "天竺王朝", "category": "电子游艺"}, {"name": "玛雅黄金", "category": "电子游艺"}, {"name": "宝石侠", "category": "电子游艺"}, {"name": "亲爱的", "category": "电子游艺"}, {"name": "扑克王国", "category": "电子游艺"}, {"name": "宝石热气球", "category": "电子游艺"}, {"name": "保龄球之王", "category": "电子游艺"}, {"name": "嘻哈派对", "category": "电子游艺"}, {"name": "超级百搭王", "category": "电子游艺"}, {"name": "擂台之王", "category": "电子游艺"}, {"name": "丧尸大作战", "category": "电子游艺"}, {"name": "健身狂潮", "category": "电子游艺"}, {"name": "猴菇迷幻夜", "category": "电子游艺"}, {"name": "直击龙卷风", "category": "电子游艺"}, {"name": "橄敢赢", "category": "电子游艺"}, {"name": "旺旺旺", "category": "电子游艺"}, {"name": "抓抓乐", "category": "电子游艺"}, {"name": "摇钱树", "category": "电子游艺"}, {"name": "保龄球之王", "category": "电子游艺"}, {"name": "嘻哈派对", "category": "电子游艺"}, {"name": "超级百搭王", "category": "电子游艺"}, {"name": "擂台之王", "category": "电子游艺"}, {"name": "丧尸大作战", "category": "电子游艺"}, {"name": "健身狂潮", "category": "电子游艺"}, {"name": "猴菇迷幻夜", "category": "电子游艺"}, {"name": "大丰收", "category": "电子游艺"}, {"name": "直击龙卷风", "category": "电子游艺"}, {"name": "橄敢赢", "category": "电子游艺"}, {"name": "旺旺旺", "category": "电子游艺"}, {"name": "抓抓乐", "category": "电子游艺"}, {"name": "摇钱树", "category": "电子游艺"}, {"name": "鱼跃龙门", "category": "电子游艺"}, {"name": "横财来啦", "category": "电子游艺"}, {"name": "至尊百家乐", "category": "电子游艺"}, {"name": "嘻哈熊猫", "category": "电子游艺"}, {"name": "后羿射日", "category": "电子游艺"}, {"name": "万胜狂欢夜", "category": "电子游艺"}, {"name": "舞狮进宝", "category": "电子游艺"}, {"name": "圣诞欢乐送", "category": "电子游艺"}, {"name": "宝石侠-大宝剑", "category": "电子游艺"}, {"name": "金猪报财", "category": "电子游艺"}, {"name": "水果丛林", "category": "电子游艺"}, {"name": "埃及寻宝", "category": "电子游艺"}, {"name": "象财神", "category": "电子游艺"}, {"name": "皇上吉祥", "category": "电子游艺"}, {"name": "双囍临门", "category": "电子游艺"}, {"name": "嘻游记", "category": "电子游艺"}, {"name": "赏金船长", "category": "电子游艺"}, {"name": "德古拉女爵", "category": "电子游艺"}, {"name": "忍者vs武侍", "category": "电子游艺"}, {"name": "美杜莎 II", "category": "电子游艺"}, {"name": "唐伯虎点秋香", "category": "电子游艺"}, {"name": "宝石侠 - 宝藏征途", "category": "电子游艺"}, {"name": "龙虎争霸", "category": "电子游艺"}, {"name": "拳霸", "category": "电子游艺"}, {"name": "少林足球", "category": "电子游艺"}, {"name": "鼠鼠福福", "category": "电子游艺"}, {"name": "比基尼天堂", "category": "电子游艺"}, {"name": "美杜莎", "category": "电子游艺"}, {"name": "糖果连连爆", "category": "电子游艺"}, {"name": "欢乐嘉年华", "category": "电子游艺"}, {"name": "火树赢花", "category": "电子游艺"}, {"name": "赏金女王", "category": "电子游艺"}, {"name": "阿拉丁神灯", "category": "电子游艺"}, {"name": "星旅淘金", "category": "电子游艺"}, {"name": "金玉满堂", "category": "电子游艺"}, {"name": "艳后之谜", "category": "电子游艺"}, {"name": "冰火双娇", "category": "电子游艺"}, {"name": "新国粹", "category": "电子游艺"}, {"name": "巴厘之旅", "category": "电子游艺"}, {"name": "宝石传奇", "category": "电子游艺"}, {"name": "冰锋奇侠", "category": "电子游艺"}], "AWC视讯": [{"name": "AWC视讯", "category": "真人视讯"}], "MW": [{"name": "逆天问道-渔湘", "category": "电子游艺"}, {"name": "弹珠", "category": "电子游艺"}, {"name": "赏金洛基", "category": "电子游艺"}, {"name": "开心消消乐", "category": "电子游艺"}, {"name": "福袋连连-龙", "category": "电子游艺"}, {"name": "福袋连连-熊猫", "category": "电子游艺"}, {"name": "喜茶消消乐2", "category": "电子游艺"}, {"name": "喜茶消消乐", "category": "电子游艺"}, {"name": "喜茶", "category": "电子游艺"}, {"name": "摸珠子", "category": "电子游艺"}, {"name": "逆天问道-斗佛", "category": "电子游艺"}, {"name": "逆天问道-天音", "category": "电子游艺"}, {"name": "麻将碰碰", "category": "电子游艺"}, {"name": "逆天问道-法魂", "category": "电子游艺"}, {"name": "比倍王-777", "category": "电子游艺"}, {"name": "逆天问道-奕剑", "category": "电子游艺"}, {"name": "淘金热", "category": "电子游艺"}, {"name": "丛林秘宝", "category": "电子游艺"}, {"name": "闪电-金蟾蜍", "category": "电子游艺"}, {"name": "闪电-帝王宝藏", "category": "电子游艺"}, {"name": "闪电-财富之眼", "category": "电子游艺"}, {"name": "闪电-龙之宝藏", "category": "电子游艺"}, {"name": "金吉-牡丹齐放", "category": "电子游艺"}, {"name": "麻将碰碰2+", "category": "电子游艺"}, {"name": "火箭", "category": "电子游艺"}, {"name": "百人摸珠子", "category": "电子游艺"}, {"name": "森林舞会3", "category": "电子游艺"}, {"name": "尊爵会馆", "category": "电子游艺"}, {"name": "新-千炮捕鱼", "category": "捕鱼游戏"}, {"name": "糖果乐园2048", "category": "电子游艺"}, {"name": "超级王牌+", "category": "电子游艺"}, {"name": "超级王牌2+", "category": "电子游艺"}, {"name": "超级王牌", "category": "电子游艺"}, {"name": "弹珠3", "category": "电子游艺"}, {"name": "弹珠2", "category": "电子游艺"}, {"name": "金吉-锣鼓喧天", "category": "电子游艺"}, {"name": "疯狂麻将", "category": "电子游艺"}, {"name": "多福多财", "category": "电子游艺"}, {"name": "松果弹珠2", "category": "电子游艺"}, {"name": "海神波塞顿", "category": "电子游艺"}, {"name": "疯狂小羊哥", "category": "电子游艺"}, {"name": "满贯王牌", "category": "电子游艺"}, {"name": "开心农场", "category": "电子游艺"}, {"name": "麻将碰碰+", "category": "电子游艺"}, {"name": "恐龙扛狼", "category": "电子游艺"}, {"name": "麻将碰碰2", "category": "电子游艺"}, {"name": "天龙虎地", "category": "电子游艺"}, {"name": "蜜糖甜心", "category": "电子游艺"}, {"name": "金鲨银鲨", "category": "电子游艺"}, {"name": "舞狮报喜", "category": "电子游艺"}, {"name": "双龙抢珠", "category": "电子游艺"}, {"name": "百家乐", "category": "电子游艺"}, {"name": "太极", "category": "电子游艺"}, {"name": "百乐牛牛", "category": "电子游艺"}, {"name": "皇家轮盘", "category": "电子游艺"}, {"name": "洪福齐天", "category": "电子游艺"}, {"name": "明星97", "category": "电子游艺"}, {"name": "黄金777", "category": "电子游艺"}, {"name": "五路财神", "category": "电子游艺"}, {"name": "水浒英雄", "category": "电子游艺"}, {"name": "五龙争霸", "category": "电子游艺"}, {"name": "水浒传", "category": "电子游艺"}, {"name": "千炮捕鱼", "category": "捕鱼游戏"}, {"name": "捕鱼大满贯", "category": "捕鱼游戏"}, {"name": "森林舞会", "category": "电子游艺"}, {"name": "森林舞会2", "category": "电子游艺"}, {"name": "超级斗地主", "category": "棋牌游戏"}, {"name": "好运5扑克", "category": "电子游艺"}, {"name": "经典水果机", "category": "电子游艺"}, {"name": "金运熊猫", "category": "电子游艺"}, {"name": "金吉-彩钻连连", "category": "电子游艺"}, {"name": "金吉-无尽宝藏", "category": "电子游艺"}, {"name": "金吉-财源滚滚", "category": "电子游艺"}, {"name": "鱼跃龙门", "category": "电子游艺"}, {"name": "吉祥如意", "category": "电子游艺"}, {"name": "财-富贵牡丹", "category": "电子游艺"}, {"name": "财-锣鼓迎富", "category": "电子游艺"}, {"name": "财-永恒彩钻", "category": "电子游艺"}, {"name": "财-传奇选择", "category": "电子游艺"}, {"name": "财-财源广进", "category": "电子游艺"}, {"name": "活动专区", "category": "电子游艺"}, {"name": "富-富贵牡丹", "category": "电子游艺"}, {"name": "富-锣鼓迎富", "category": "电子游艺"}, {"name": "富-永恒彩钻", "category": "电子游艺"}, {"name": "富-传奇选择", "category": "电子游艺"}, {"name": "富-财源广进", "category": "电子游艺"}, {"name": "招财猫", "category": "电子游艺"}, {"name": "发大财", "category": "电子游艺"}, {"name": "西游记", "category": "电子游艺"}, {"name": "鱼鱼鱼", "category": "电子游艺"}, {"name": "龙虎斗", "category": "电子游艺"}], "FG": [{"name": "天天捕鱼", "category": "捕鱼游戏"}, {"name": "招财进宝", "category": "电子游艺"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "关秦龙虎斗", "category": "棋牌游戏"}, {"name": "美人捕鱼", "category": "捕鱼游戏"}, {"name": "捕鸟达人", "category": "捕鱼游戏"}, {"name": "经典炸金花", "category": "棋牌游戏"}, {"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "魔法王者", "category": "捕鱼游戏"}, {"name": "斗地主", "category": "棋牌游戏"}, {"name": "梭哈", "category": "棋牌游戏"}, {"name": "红黑大战", "category": "棋牌游戏"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "二八杠", "category": "棋牌游戏"}, {"name": "抢庄牌九", "category": "棋牌游戏"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "二人麻将", "category": "棋牌游戏"}, {"name": "水果派对", "category": "电子游艺"}, {"name": "奔驰宝马2", "category": "电子游艺"}, {"name": "极速炸金花", "category": "棋牌游戏"}, {"name": "欢乐德州", "category": "棋牌游戏"}, {"name": "十三水", "category": "棋牌游戏"}, {"name": "骰宝", "category": "棋牌游戏"}, {"name": "21点", "category": "棋牌游戏"}, {"name": "德州牛仔", "category": "棋牌游戏"}, {"name": "十二星座", "category": "电子游艺"}, {"name": "现代战争", "category": "电子游艺"}, {"name": "神雕侠侣", "category": "电子游艺"}, {"name": "女校足球队", "category": "电子游艺"}, {"name": "笑傲江湖", "category": "电子游艺"}, {"name": "加勒比海盗", "category": "电子游艺"}, {"name": "拉斯维加斯", "category": "电子游艺"}, {"name": "欢乐捕鱼", "category": "捕鱼游戏"}, {"name": "龙珠探宝", "category": "电子游艺"}, {"name": "水果机", "category": "电子游艺"}, {"name": "飞禽走兽", "category": "电子游艺"}, {"name": "水果转盘", "category": "电子游艺"}, {"name": "赛马", "category": "电子游艺"}, {"name": "皇家宫殿", "category": "棋牌游戏"}, {"name": "皇家德州", "category": "棋牌游戏"}, {"name": "十二生肖", "category": "电子游艺"}, {"name": "十二星座", "category": "电子游艺"}, {"name": "美人鱼传说", "category": "捕鱼游戏"}, {"name": "雷霆战警", "category": "捕鱼游戏"}, {"name": "埃及女王", "category": "电子游艺"}, {"name": "愤怒的小鸟", "category": "电子游艺"}, {"name": "阿凡达", "category": "电子游艺"}, {"name": "阿兹特克", "category": "电子游艺"}, {"name": "飞禽走兽2", "category": "棋牌游戏"}, {"name": "白蛇传", "category": "电子游艺"}, {"name": "变形金刚", "category": "电子游艺"}, {"name": "刺客信条", "category": "电子游艺"}, {"name": "猜色球", "category": "棋牌游戏"}, {"name": "多福多财", "category": "电子游艺"}, {"name": "世界末日", "category": "电子游艺"}, {"name": "大秦帝国", "category": "电子游艺"}, {"name": "单挑牛牛", "category": "棋牌游戏"}, {"name": "埃及", "category": "电子游艺"}, {"name": "埃菲尔", "category": "电子游艺"}, {"name": "蜘蛛侠", "category": "电子游艺"}, {"name": "捕鱼来了3D", "category": "捕鱼游戏"}, {"name": "龙王捕鱼", "category": "捕鱼游戏"}, {"name": "全民捕鱼", "category": "捕鱼游戏"}, {"name": "魔法王者2", "category": "捕鱼游戏"}, {"name": "水果传奇", "category": "电子游艺"}, {"name": "森林舞会", "category": "电子游艺"}, {"name": "富饶农场", "category": "电子游艺"}, {"name": "封神榜", "category": "电子游艺"}, {"name": "格斗之王", "category": "电子游艺"}, {"name": "古怪猴子", "category": "电子游艺"}, {"name": "恭贺新春", "category": "电子游艺"}, {"name": "古墓丽影", "category": "电子游艺"}, {"name": "哥谭魅影猫女", "category": "电子游艺"}, {"name": "黄金大转轮", "category": "电子游艺"}, {"name": "怪物命运", "category": "电子游艺"}, {"name": "国王游戏", "category": "电子游艺"}, {"name": "红楼梦", "category": "电子游艺"}, {"name": "幻想大陆", "category": "电子游艺"}, {"name": "火影忍者", "category": "电子游艺"}, {"name": "黑珍珠号", "category": "电子游艺"}, {"name": "角斗士", "category": "电子游艺"}, {"name": "Jhandi Munda", "category": "棋牌游戏"}, {"name": "舰娘远征", "category": "电子游艺"}, {"name": "金瓶梅", "category": "电子游艺"}, {"name": "金球争霸", "category": "电子游艺"}, {"name": "街头霸王", "category": "电子游艺"}, {"name": "侏罗纪", "category": "电子游艺"}, {"name": "剑侠情缘", "category": "电子游艺"}, {"name": "狂欢", "category": "电子游艺"}, {"name": "看牌抢庄牛牛", "category": "棋牌游戏"}, {"name": "乐斗牛魔王3D", "category": "棋牌游戏"}, {"name": "龙虎百家乐", "category": "棋牌游戏"}, {"name": "3D龙虎斗", "category": "棋牌游戏"}, {"name": "幸运5", "category": "电子游艺"}, {"name": "绿野仙踪", "category": "电子游艺"}, {"name": "街机水浒传", "category": "电子游艺"}, {"name": "海岛奇兵", "category": "电子游艺"}, {"name": "百变猴子", "category": "电子游艺"}, {"name": "疯狂七", "category": "电子游艺"}, {"name": "金瓶梅", "category": "电子游艺"}, {"name": "金球争霸", "category": "电子游艺"}, {"name": "街头霸王", "category": "电子游艺"}, {"name": "侏罗纪", "category": "电子游艺"}, {"name": "剑侠情缘", "category": "电子游艺"}, {"name": "狂欢", "category": "电子游艺"}, {"name": "看牌抢庄牛牛", "category": "棋牌游戏"}, {"name": "乐斗牛魔王3D", "category": "棋牌游戏"}, {"name": "龙虎百家乐", "category": "棋牌游戏"}, {"name": "3D龙虎斗", "category": "棋牌游戏"}, {"name": "幸运5", "category": "电子游艺"}, {"name": "甜水绿洲", "category": "电子游艺"}, {"name": "绿野仙踪", "category": "电子游艺"}, {"name": "街机水浒传", "category": "电子游艺"}, {"name": "海岛奇兵", "category": "电子游艺"}, {"name": "百变猴子", "category": "电子游艺"}, {"name": "疯狂七", "category": "电子游艺"}, {"name": "船长宝藏", "category": "电子游艺"}, {"name": "钻石之恋", "category": "电子游艺"}, {"name": "梦幻西游", "category": "电子游艺"}, {"name": "麻将来了Pro", "category": "电子游艺"}, {"name": "激情球迷", "category": "电子游艺"}, {"name": "激情世界杯", "category": "电子游艺"}, {"name": "摸金校尉", "category": "电子游艺"}, {"name": "金靴争霸", "category": "电子游艺"}, {"name": "幸运水果机", "category": "电子游艺"}, {"name": "众神之王", "category": "电子游艺"}, {"name": "埃及艳后", "category": "电子游艺"}, {"name": "闹元宵", "category": "电子游艺"}, {"name": "粉红女郎", "category": "电子游艺"}, {"name": "鸟叔", "category": "电子游艺"}, {"name": "抢红包", "category": "电子游艺"}, {"name": "猴子爬树", "category": "电子游艺"}, {"name": "灌篮高手", "category": "电子游艺"}, {"name": "森林舞会", "category": "电子游艺"}, {"name": "泰坦尼克号", "category": "电子游艺"}, {"name": "玛雅", "category": "电子游艺"}, {"name": "梦游仙境", "category": "电子游艺"}, {"name": "女校橄榄球", "category": "电子游艺"}, {"name": "女校剑道部", "category": "电子游艺"}, {"name": "新年", "category": "电子游艺"}, {"name": "新年符号", "category": "电子游艺"}, {"name": "西部牛仔", "category": "电子游艺"}, {"name": "荒野大镖客", "category": "电子游艺"}, {"name": "哪吒闹海", "category": "电子游艺"}, {"name": "功夫熊猫：神龙觉醒", "category": "电子游艺"}, {"name": "潘帕斯雄鹰", "category": "电子游艺"}, {"name": "性感女神", "category": "电子游艺"}, {"name": "植物大战僵尸", "category": "电子游艺"}, {"name": "抢红包", "category": "棋牌游戏"}, {"name": "鹊桥会", "category": "电子游艺"}, {"name": "群星闪耀", "category": "电子游艺"}, {"name": "七夕情缘", "category": "电子游艺"}, {"name": "抢庄牛牛2", "category": "棋牌游戏"}, {"name": "抢庄牛牛3D", "category": "棋牌游戏"}, {"name": "瑞狗迎春", "category": "电子游艺"}, {"name": "66路", "category": "电子游艺"}, {"name": "人猿泰山", "category": "电子游艺"}, {"name": "荣耀王者", "category": "电子游艺"}, {"name": "女校啦啦队", "category": "电子游艺"}, {"name": "四大美女", "category": "电子游艺"}, {"name": "欢乐水果", "category": "电子游艺"}, {"name": "女校体操队", "category": "电子游艺"}, {"name": "连环夺宝", "category": "电子游艺"}, {"name": "世界杯吉祥物", "category": "电子游艺"}, {"name": "扫雷红包", "category": "棋牌游戏"}, {"name": "神秘东方", "category": "电子游艺"}, {"name": "女校游泳队", "category": "电子游艺"}, {"name": "淘金热", "category": "电子游艺"}, {"name": "弹弹丸", "category": "电子游艺"}, {"name": "越式鱼虾蟹", "category": "棋牌游戏"}, {"name": "守望英雄", "category": "电子游艺"}, {"name": "百人WinGo", "category": "棋牌游戏"}, {"name": "鹿鼎记", "category": "电子游艺"}, {"name": "武松打虎", "category": "电子游艺"}, {"name": "武圣关云长", "category": "电子游艺"}, {"name": "天龙八部", "category": "电子游艺"}, {"name": "五星宏辉", "category": "棋牌游戏"}, {"name": "仙剑", "category": "电子游艺"}, {"name": "希腊传说", "category": "电子游艺"}, {"name": "喜气洋洋", "category": "电子游艺"}, {"name": "湛蓝深海", "category": "电子游艺"}, {"name": "吸血鬼PK狼人", "category": "电子游艺"}, {"name": "西游", "category": "电子游艺"}, {"name": "欢乐麻将", "category": "棋牌游戏"}, {"name": "押宝抢庄牛牛", "category": "棋牌游戏"}, {"name": "印第安", "category": "电子游艺"}, {"name": "东方国度", "category": "电子游艺"}, {"name": "指环王", "category": "电子游艺"}, {"name": "战舰少女", "category": "电子游艺"}, {"name": "十二生肖", "category": "电子游艺"}, {"name": "中世纪特权", "category": "电子游艺"}, {"name": "战争", "category": "电子游艺"}, {"name": "蜘蛛侠", "category": "电子游艺"}], "BSP": [{"name": "炸金牛", "category": "棋牌游戏"}, {"name": "⼆⼈麻将", "category": "棋牌游戏"}, {"name": "金蟾捕鱼", "category": "捕鱼游戏"}, {"name": "宝石消消消", "category": "电子游艺"}, {"name": "抢红包", "category": "棋牌游戏"}, {"name": "癞子牛牛", "category": "棋牌游戏"}, {"name": "看三张抢庄牛牛", "category": "棋牌游戏"}, {"name": "德州扑克前注场", "category": "棋牌游戏"}, {"name": "极速斗地主", "category": "棋牌游戏"}, {"name": "3D海盗来了", "category": "捕鱼游戏"}, {"name": "3D美人渔", "category": "捕鱼游戏"}, {"name": "李逵劈鱼", "category": "捕鱼游戏"}, {"name": "大闹天宫", "category": "捕鱼游戏"}, {"name": "捕鸟达人", "category": "捕鱼游戏"}, {"name": "3D世界杯", "category": "电子游艺"}, {"name": "千炮捕鱼王", "category": "捕鱼游戏"}, {"name": "赌场扑克", "category": "棋牌游戏"}, {"name": "梭哈", "category": "棋牌游戏"}, {"name": "3D看四张牛牛", "category": "棋牌游戏"}, {"name": "3D抢庄牛牛", "category": "棋牌游戏"}, {"name": "3D炸金花", "category": "棋牌游戏"}, {"name": "3D圣城风云", "category": "电子游艺"}, {"name": "经典水果", "category": "电子游艺"}, {"name": "3D布法罗山谷", "category": "电子游艺"}, {"name": "黄金国度", "category": "电子游艺"}, {"name": "跑得快", "category": "棋牌游戏"}, {"name": "百人推筒子", "category": "棋牌游戏"}, {"name": "押庒龙虎", "category": "棋牌游戏"}, {"name": "炸金花", "category": "棋牌游戏"}, {"name": "通比牌九", "category": "棋牌游戏"}, {"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "红黑大战", "category": "棋牌游戏"}, {"name": "十三水", "category": "棋牌游戏"}, {"name": "斗地主", "category": "棋牌游戏"}, {"name": "德州扑克", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "翻倍血流", "category": "棋牌游戏"}, {"name": "极速炸金花", "category": "棋牌游戏"}, {"name": "21点", "category": "棋牌游戏"}, {"name": "欧式轮盘", "category": "电子游艺"}, {"name": "十点半", "category": "棋牌游戏"}, {"name": "捕鱼王中王", "category": "捕鱼游戏"}, {"name": "百人百家乐", "category": "棋牌游戏"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "看牌抢庄牛牛", "category": "棋牌游戏"}, {"name": "奔驰宝马", "category": "电子游艺"}, {"name": "血流成河", "category": "棋牌游戏"}], "KX": [{"name": "欢乐斗牛", "category": "棋牌游戏"}, {"name": "抢庄五选三", "category": "棋牌游戏"}, {"name": "红黑大战", "category": "棋牌游戏"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "龙虎斗", "category": "棋牌游戏"}, {"name": "看四张抢庄牛", "category": "棋牌游戏"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "抢红包", "category": "棋牌游戏"}, {"name": "血战到底", "category": "棋牌游戏"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "掼蛋", "category": "棋牌游戏"}, {"name": "看牌抢庄三公", "category": "棋牌游戏"}, {"name": "3+2炸金花", "category": "棋牌游戏"}, {"name": "百人骰宝", "category": "棋牌游戏"}, {"name": "随机庄百变牛", "category": "棋牌游戏"}, {"name": "抢庄牌九", "category": "棋牌游戏"}, {"name": "跑得快", "category": "棋牌游戏"}, {"name": "十三水", "category": "棋牌游戏"}, {"name": "斗地主", "category": "棋牌游戏"}, {"name": "21点", "category": "棋牌游戏"}, {"name": "大富翁宾果", "category": "棋牌游戏"}], "皇冠体育": [{"name": "皇冠体育", "category": "体育投注"}], "GKD": [{"name": "分分PK拾", "category": "彩票投注"}, {"name": "新加坡六合彩", "category": "彩票投注"}, {"name": "台湾大乐透", "category": "彩票投注"}, {"name": "分分时时彩", "category": "彩票投注"}, {"name": "安徽快3", "category": "彩票投注"}, {"name": "分分六合彩", "category": "彩票投注"}, {"name": "三分PK拾", "category": "彩票投注"}, {"name": "五分PK拾", "category": "彩票投注"}, {"name": "三分快3", "category": "彩票投注"}, {"name": "五分快3", "category": "彩票投注"}, {"name": "分分28", "category": "彩票投注"}, {"name": "三分28", "category": "彩票投注"}, {"name": "五分时时彩", "category": "彩票投注"}, {"name": "五分28", "category": "彩票投注"}, {"name": "三分六合彩", "category": "彩票投注"}, {"name": "澳门六合彩", "category": "彩票投注"}, {"name": "新幸运飞艇", "category": "彩票投注"}, {"name": "澳门十分六合彩", "category": "彩票投注"}, {"name": "广西快3", "category": "彩票投注"}, {"name": "江苏快3", "category": "彩票投注"}, {"name": "香港⑥合彩", "category": "彩票投注"}, {"name": "山东11选5", "category": "彩票投注"}, {"name": "上海11选5", "category": "彩票投注"}, {"name": "江西11选5", "category": "彩票投注"}, {"name": "广东11选5", "category": "彩票投注"}, {"name": "安徽11选5", "category": "彩票投注"}, {"name": "排列三", "category": "彩票投注"}, {"name": "福彩3D", "category": "彩票投注"}, {"name": "新疆时时彩", "category": "彩票投注"}, {"name": "五分六合彩", "category": "彩票投注"}, {"name": "幸运28", "category": "彩票投注"}, {"name": "三分时时彩", "category": "彩票投注"}, {"name": "幸运飞艇", "category": "彩票投注"}, {"name": "分分快三", "category": "彩票投注"}, {"name": "极速3D", "category": "彩票投注"}, {"name": "分分11选5", "category": "彩票投注"}, {"name": "湖北快3", "category": "彩票投注"}], "YGGDZ": [{"name": "水果拉霸", "category": "电子游艺"}, {"name": "太空漫游", "category": "电子游艺"}, {"name": "复古花园", "category": "电子游艺"}, {"name": "日本武士", "category": "电子游艺"}, {"name": "象棋老虎机", "category": "电子游艺"}, {"name": "麻将老虎机", "category": "电子游艺"}, {"name": "开心农场", "category": "电子游艺"}, {"name": "夏日营地", "category": "电子游艺"}, {"name": "武财神", "category": "电子游艺"}, {"name": "灵猴献瑞", "category": "电子游艺"}, {"name": "糖果碰碰乐", "category": "电子游艺"}, {"name": "冰河世界", "category": "电子游艺"}, {"name": "水果拉霸2", "category": "电子游艺"}, {"name": "上海百乐门", "category": "电子游艺"}, {"name": "猛龙传奇", "category": "电子游艺"}, {"name": "神奇宝石", "category": "电子游艺"}, {"name": "金龙珠", "category": "电子游艺"}, {"name": "XIN哥来了", "category": "电子游艺"}, {"name": "王者传说", "category": "电子游艺"}, {"name": "多宝鱼虾蟹", "category": "电子游艺"}, {"name": "魔龙", "category": "电子游艺"}, {"name": "魅惑魔女", "category": "电子游艺"}, {"name": "龙珠", "category": "电子游艺"}, {"name": "幸运8", "category": "电子游艺"}, {"name": "闪亮女郎", "category": "电子游艺"}, {"name": "金鱼", "category": "电子游艺"}, {"name": "中国新年", "category": "电子游艺"}, {"name": "海盗王", "category": "电子游艺"}, {"name": "鲜果狂热", "category": "电子游艺"}, {"name": "小熊猫", "category": "电子游艺"}, {"name": "大豪客", "category": "电子游艺"}, {"name": "龙舟竞渡", "category": "电子游艺"}, {"name": "中秋佳节", "category": "电子游艺"}, {"name": "韩风劲舞", "category": "电子游艺"}, {"name": "美女大格斗", "category": "电子游艺"}, {"name": "黄金对垒", "category": "电子游艺"}, {"name": "街头烈战", "category": "电子游艺"}, {"name": "金拉霸", "category": "电子游艺"}, {"name": "百搭777", "category": "电子游艺"}, {"name": "钻石女王", "category": "电子游艺"}, {"name": "跳跳乐", "category": "电子游艺"}, {"name": "阿里巴巴", "category": "电子游艺"}, {"name": "圣女贞德", "category": "电子游艺"}, {"name": "冠军足球", "category": "电子游艺"}, {"name": "穆夏女神", "category": "电子游艺"}, {"name": "亚瑟王", "category": "电子游艺"}, {"name": "五狮进宝", "category": "电子游艺"}, {"name": "爱丽丝大冒险", "category": "电子游艺"}, {"name": "战火风云", "category": "电子游艺"}, {"name": "发财熊猫", "category": "电子游艺"}, {"name": "嫦娥奔月", "category": "电子游艺"}, {"name": "白雪公主", "category": "电子游艺"}, {"name": "财宝塔罗", "category": "电子游艺"}, {"name": "葫芦兄弟", "category": "电子游艺"}, {"name": "永恒之吻", "category": "电子游艺"}, {"name": "恐怖嘉年华", "category": "电子游艺"}, {"name": "封神演义", "category": "电子游艺"}, {"name": "僵尸来袭", "category": "电子游艺"}, {"name": "和风剧院", "category": "电子游艺"}, {"name": "埃及宝藏", "category": "电子游艺"}, {"name": "狂野女巫", "category": "电子游艺"}, {"name": "点石成金", "category": "电子游艺"}, {"name": "贪玩蓝月", "category": "电子游艺"}, {"name": "内衣橄榄球", "category": "电子游艺"}, {"name": "招财锦鲤", "category": "电子游艺"}, {"name": "橫行霸道", "category": "电子游艺"}, {"name": "十二生肖", "category": "电子游艺"}, {"name": "皇家戏台", "category": "电子游艺"}, {"name": "古惑仔", "category": "电子游艺"}, {"name": "蒸汽战争", "category": "电子游艺"}, {"name": "神奇宠物", "category": "电子游艺"}, {"name": "掘金達人", "category": "电子游艺"}, {"name": "酒馆宝藏", "category": "电子游艺"}, {"name": "沙滩派对", "category": "电子游艺"}, {"name": "口袋足球", "category": "电子游艺"}, {"name": "决胜金球", "category": "电子游艺"}, {"name": "牛转乾坤", "category": "电子游艺"}, {"name": "疯狂奖金", "category": "电子游艺"}, {"name": "足球热", "category": "电子游艺"}, {"name": "足球宝贝", "category": "电子游艺"}, {"name": "金龙发发VIP", "category": "电子游艺"}, {"name": "泳池派对", "category": "电子游艺"}, {"name": "名光之城", "category": "电子游艺"}, {"name": "玩具城/Toy City", "category": "电子游艺"}, {"name": "夺宝船奇", "category": "电子游艺"}, {"name": "狮来运转/Fortune Roar", "category": "电子游艺"}, {"name": "街头食神", "category": "电子游艺"}, {"name": "奇幻马戏团", "category": "电子游艺"}, {"name": "龙族宝藏", "category": "电子游艺"}, {"name": "森林精灵", "category": "电子游艺"}, {"name": "深海王国", "category": "电子游艺"}, {"name": "大聖悟空", "category": "电子游艺"}, {"name": "铁盗枭雄", "category": "电子游艺"}, {"name": "四灵奇谭", "category": "电子游艺"}, {"name": "赌城之夜", "category": "电子游艺"}, {"name": "麻将狂人", "category": "电子游艺"}, {"name": "点心大师", "category": "电子游艺"}, {"name": "福滿中秋", "category": "电子游艺"}, {"name": "鬼灭之战", "category": "电子游艺"}, {"name": "麻将碰了杠了", "category": "电子游艺"}, {"name": "森林舞会", "category": "电子游艺"}, {"name": "奔驰宝马", "category": "电子游艺"}, {"name": "极速赛马", "category": "电子游艺"}, {"name": "猜猜乐", "category": "电子游艺"}, {"name": "水果拉霸", "category": "电子游艺"}, {"name": "德州牛仔", "category": "电子游艺"}, {"name": "飞禽走兽", "category": "电子游艺"}, {"name": "水果派对", "category": "电子游艺"}, {"name": "森林舞会多人版", "category": "电子游艺"}, {"name": "奔驰宝马多人版", "category": "电子游艺"}, {"name": "水果拉霸多人版", "category": "电子游艺"}, {"name": "飞禽走兽多人版", "category": "电子游艺"}, {"name": "百人牛牛", "category": "电子游艺"}, {"name": "多宝水果拉霸", "category": "电子游艺"}, {"name": "彩金水果拉霸", "category": "电子游艺"}, {"name": "牛牛对战", "category": "电子游艺"}, {"name": "翻倍炸金花", "category": "电子游艺"}, {"name": "动物狂欢", "category": "电子游艺"}, {"name": "西游争霸", "category": "电子游艺"}, {"name": "斗三公", "category": "电子游艺"}, {"name": "刺激战场", "category": "电子游艺"}, {"name": "红黑梅方", "category": "电子游艺"}, {"name": "彩金宝藏世界", "category": "电子游艺"}, {"name": "疯狂德州", "category": "电子游艺"}, {"name": "彩金奔驰宝马", "category": "电子游艺"}, {"name": "海陆争霸", "category": "电子游艺"}, {"name": "双喜炸金花", "category": "电子游艺"}, {"name": "百人推筒子", "category": "电子游艺"}, {"name": "全民21点", "category": "电子游艺"}, {"name": "福星推筒子", "category": "电子游艺"}, {"name": "凤凰传奇", "category": "电子游艺"}, {"name": "功夫万条筒", "category": "电子游艺"}, {"name": "财富转盘", "category": "电子游艺"}, {"name": "射龙门", "category": "电子游艺"}, {"name": "YP刮刮卡", "category": "电子游艺"}, {"name": "11选5", "category": "电子游艺"}, {"name": "幸运7", "category": "电子游艺"}, {"name": "宠物乐园", "category": "电子游艺"}, {"name": "彩金飞禽走兽", "category": "电子游艺"}, {"name": "彩金森林舞会", "category": "电子游艺"}, {"name": "皇牌ACE", "category": "电子游艺"}, {"name": "色碟", "category": "电子游艺"}, {"name": "幸运骨牌", "category": "电子游艺"}, {"name": "极速传说", "category": "电子游艺"}, {"name": "怒射狂奔", "category": "电子游艺"}, {"name": "冰鹅世纪", "category": "电子游艺"}, {"name": "小飞鸡", "category": "电子游艺"}, {"name": "一线三连", "category": "电子游艺"}], "JDB": [{"name": "奔驰宝马", "category": "电子游艺"}, {"name": "火箭赛驹", "category": "电子游艺"}, {"name": "马上胡了", "category": "电子游艺"}, {"name": "赏金马皇", "category": "电子游艺"}, {"name": "十倍金马", "category": "电子游艺"}, {"name": "神驹送宝", "category": "电子游艺"}, {"name": "黄金马传奇", "category": "电子游艺"}, {"name": "马场大亨", "category": "电子游艺"}, {"name": "海神宝马", "category": "电子游艺"}, {"name": "斗鸡", "category": "电子游艺"}, {"name": "玛雅", "category": "电子游艺"}, {"name": "777爆奖 3 黄金版", "category": "电子游艺"}, {"name": "阿兹特克：太阳神的赐福", "category": "电子游艺"}, {"name": "3 Combo 爆竹连连", "category": "电子游艺"}, {"name": "黄金小猪 Megaways", "category": "电子游艺"}, {"name": "3 Combo 甜蜜爆破", "category": "电子游艺"}, {"name": "屌丝熊猫", "category": "电子游艺"}, {"name": "3 Combo 猪猪派对", "category": "电子游艺"}, {"name": "3 Combo 奥林帕斯", "category": "电子游艺"}, {"name": "幸运南瓜灯", "category": "电子游艺"}, {"name": "罗马再临", "category": "电子游艺"}, {"name": "幸运草之酿", "category": "电子游艺"}, {"name": "宙斯宝石", "category": "电子游艺"}, {"name": "塞尔达传说", "category": "电子游艺"}, {"name": "包大人", "category": "电子游艺"}, {"name": "亿万富翁", "category": "电子游艺"}, {"name": "一拳超人", "category": "电子游艺"}, {"name": "神龙大侠", "category": "电子游艺"}, {"name": "飞龙在天", "category": "电子游艺"}, {"name": "银河护卫队", "category": "电子游艺"}, {"name": "街头霸王", "category": "电子游艺"}, {"name": "春宵苦短", "category": "电子游艺"}, {"name": "星球大战", "category": "电子游艺"}, {"name": "王牌特工", "category": "电子游艺"}, {"name": "少女前线", "category": "电子游艺"}, {"name": "妲己", "category": "电子游艺"}, {"name": "宝石物语", "category": "电子游艺"}, {"name": "魔法乳神", "category": "电子游艺"}, {"name": "钱滚钱", "category": "电子游艺"}, {"name": "采矿土豪", "category": "电子游艺"}, {"name": "赌王扑克", "category": "电子游艺"}, {"name": "幸运赛车", "category": "电子游艺"}, {"name": "发大财", "category": "电子游艺"}, {"name": "好运777", "category": "电子游艺"}, {"name": "东方神兽", "category": "电子游艺"}, {"name": "三倍金刚", "category": "电子游艺"}, {"name": "发发", "category": "电子游艺"}, {"name": "飞鸟派对", "category": "电子游艺"}, {"name": "狗来富", "category": "电子游艺"}, {"name": "龙舞", "category": "电子游艺"}, {"name": "超级牛B", "category": "电子游艺"}, {"name": "埃及夺宝", "category": "电子游艺"}, {"name": "开运夺宝", "category": "电子游艺"}, {"name": "七海夺宝", "category": "电子游艺"}, {"name": "雷神之锤", "category": "电子游艺"}, {"name": "聚宝盆", "category": "电子游艺"}, {"name": "蹦迪吧", "category": "电子游艺"}, {"name": "古怪金刚", "category": "电子游艺"}, {"name": "超级牛B豪华版", "category": "电子游艺"}, {"name": "采矿宝贝", "category": "电子游艺"}, {"name": "富豪哥", "category": "电子游艺"}, {"name": "龙虎百搭", "category": "电子游艺"}, {"name": "水果爆爆乐", "category": "电子游艺"}, {"name": "浪花", "category": "电子游艺"}, {"name": "浪花2", "category": "电子游艺"}, {"name": "虎福生丰", "category": "电子游艺"}, {"name": "烧烤汉堡", "category": "电子游艺"}, {"name": "神秘之书", "category": "电子游艺"}, {"name": "王牌", "category": "电子游艺"}, {"name": "富豪哥2", "category": "电子游艺"}, {"name": "芝麻开门 Mega", "category": "电子游艺"}, {"name": "爆爆甜心", "category": "电子游艺"}, {"name": "龙翔凤舞", "category": "电子游艺"}, {"name": "小猪银行", "category": "电子游艺"}, {"name": "龙翔凤舞-神龙百搭", "category": "电子游艺"}, {"name": "牛运宝藏", "category": "电子游艺"}, {"name": "财富之象", "category": "电子游艺"}, {"name": "王牌钓手", "category": "电子游艺"}, {"name": "星际水果霸", "category": "电子游艺"}, {"name": "爆爆甜心千倍版", "category": "电子游艺"}, {"name": "三鲤聚财", "category": "电子游艺"}, {"name": "诸神黄昏：索尔VS洛基", "category": "电子游艺"}, {"name": "夺宝奇航 狂潮奇兵", "category": "电子游艺"}, {"name": "天降神鸡 (颜色游戏)", "category": "电子游艺"}, {"name": "夺宝奇航 暴雪炮手", "category": "电子游艺"}, {"name": "夺宝奇航 无畏女王", "category": "电子游艺"}, {"name": "好树成双", "category": "电子游艺"}, {"name": "好棒蚌", "category": "电子游艺"}, {"name": "超级牛B 聚宝版 X-Huge", "category": "电子游艺"}, {"name": "金射门", "category": "电子游艺"}, {"name": "宝石嘉年华", "category": "电子游艺"}, {"name": "赛博赏金 4096", "category": "电子游艺"}, {"name": "金鸡报囍", "category": "电子游艺"}, {"name": "齐天大圣", "category": "电子游艺"}, {"name": "骰宝无双", "category": "电子游艺"}, {"name": "火牛阵", "category": "电子游艺"}, {"name": "幸运福娃", "category": "电子游艺"}, {"name": "印加帝国", "category": "电子游艺"}, {"name": "忍者大进击", "category": "电子游艺"}, {"name": "熊猫厨王", "category": "电子游艺"}, {"name": "后羿傳", "category": "电子游艺"}, {"name": "五福临门", "category": "电子游艺"}, {"name": "九尾狐", "category": "电子游艺"}, {"name": "龙虎争霸", "category": "电子游艺"}, {"name": "街机捕鱼", "category": "捕鱼游戏"}, {"name": "创世捕鱼", "category": "捕鱼游戏"}, {"name": "李逵劈鱼", "category": "捕鱼游戏"}, {"name": "摇钱树", "category": "电子游艺"}, {"name": "福神捕鱼", "category": "捕鱼游戏"}, {"name": "掼蛋", "category": "棋牌游戏"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "押庄射龙门", "category": "棋牌游戏"}, {"name": "抢庄六牛", "category": "棋牌游戏"}, {"name": "通比六牛", "category": "棋牌游戏"}, {"name": "竞速扑克王", "category": "电子游艺"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "Andar Bahar", "category": "棋牌游戏"}, {"name": "Rummy", "category": "棋牌游戏"}, {"name": "德州扑克", "category": "棋牌游戏"}, {"name": "UGO 阿兹特克祕宝", "category": "电子游艺"}, {"name": "当代众神", "category": "电子游艺"}, {"name": "魔法師1000", "category": "电子游艺"}, {"name": "富胖达", "category": "电子游艺"}, {"name": "好事成双", "category": "电子游艺"}, {"name": "东海龙王", "category": "电子游艺"}, {"name": "雷霆宙斯", "category": "电子游艺"}, {"name": "撒哈拉之夜", "category": "电子游艺"}, {"name": "泽达的财富", "category": "电子游艺"}, {"name": "一飞冲天", "category": "电子游艺"}, {"name": "幸运数字", "category": "电子游艺"}, {"name": "钻石大亨", "category": "电子游艺"}, {"name": "财富滑梯", "category": "电子游艺"}, {"name": "大胃王", "category": "电子游艺"}, {"name": "财富之书", "category": "电子游艺"}, {"name": "火热水果大作战", "category": "电子游艺"}, {"name": "水果赢利线100", "category": "电子游艺"}, {"name": "疯狂水牛", "category": "电子游艺"}, {"name": "法老的财富", "category": "电子游艺"}, {"name": "招财进宝", "category": "电子游艺"}, {"name": "金马财富", "category": "电子游艺"}, {"name": "幻想乐园", "category": "电子游艺"}, {"name": "神秘魔灯", "category": "电子游艺"}, {"name": "罗马角斗士", "category": "电子游艺"}, {"name": "发发龙", "category": "电子游艺"}, {"name": "滚7来", "category": "电子游艺"}, {"name": "幸运星", "category": "电子游艺"}, {"name": "索尔秘宝", "category": "电子游艺"}, {"name": "埃及王潮", "category": "电子游艺"}, {"name": "金兔宝", "category": "电子游艺"}, {"name": "招财喵喵", "category": "电子游艺"}, {"name": "爆爆金鼠", "category": "电子游艺"}, {"name": "亚瑟王黄金版", "category": "电子游艺"}, {"name": "黄金阿兹特克", "category": "电子游艺"}, {"name": "祥龙滚珠", "category": "电子游艺"}, {"name": "珍珠美人鱼", "category": "电子游艺"}, {"name": "王牌贵宾", "category": "电子游艺"}, {"name": "金埃及", "category": "电子游艺"}, {"name": "黃金阿茲特克", "category": "电子游艺"}, {"name": "王牌射手", "category": "电子游艺"}, {"name": "阿波罗之焰", "category": "电子游艺"}, {"name": "王牌海盜", "category": "电子游艺"}, {"name": "炼金女巫", "category": "电子游艺"}, {"name": "好运龙宝 - 龙转乾坤", "category": "电子游艺"}, {"name": "好运龙宝 Super Buy", "category": "电子游艺"}, {"name": "甜点女王", "category": "电子游艺"}, {"name": "黄金铁道", "category": "电子游艺"}, {"name": "小丑皇后", "category": "电子游艺"}, {"name": "虎虎爆金", "category": "电子游艺"}, {"name": "好运龙宝-福运连击", "category": "电子游艺"}, {"name": "小丑皇后豪华版", "category": "电子游艺"}, {"name": "海凰传奇", "category": "捕鱼游戏"}, {"name": "雷霆神猪", "category": "电子游艺"}, {"name": "黄金王牌", "category": "电子游艺"}, {"name": "龙王捕鱼", "category": "捕鱼游戏"}, {"name": "龙王捕鱼2", "category": "捕鱼游戏"}, {"name": "财神捕鱼", "category": "捕鱼游戏"}, {"name": "五龙捕鱼", "category": "捕鱼游戏"}, {"name": "捕鱼一路发", "category": "捕鱼游戏"}, {"name": "邪龙传奇", "category": "捕鱼游戏"}, {"name": "财神捕鱼 Jackpot", "category": "捕鱼游戏"}, {"name": "幸运龙", "category": "电子游艺"}, {"name": "唐伯虎点秋香", "category": "电子游艺"}, {"name": "变脸", "category": "电子游艺"}, {"name": "悟空", "category": "电子游艺"}, {"name": "骆马大冒险", "category": "电子游艺"}, {"name": "台湾黑熊", "category": "电子游艺"}, {"name": "幸运麟", "category": "电子游艺"}, {"name": "招财狮", "category": "电子游艺"}, {"name": "月光秘宝", "category": "电子游艺"}, {"name": "上班族狂想曲", "category": "电子游艺"}, {"name": "过新年", "category": "电子游艺"}, {"name": "拿破仑", "category": "电子游艺"}, {"name": "文房四宝", "category": "电子游艺"}, {"name": "芝麻开门", "category": "电子游艺"}, {"name": "黄金香蕉帝国", "category": "电子游艺"}, {"name": "麻雀无双", "category": "电子游艺"}, {"name": "奥林匹亚神庙", "category": "电子游艺"}, {"name": "水晶王国", "category": "电子游艺"}, {"name": "神偷妙贼", "category": "电子游艺"}, {"name": "热舞教父", "category": "电子游艺"}, {"name": "料理厨王", "category": "电子游艺"}, {"name": "幸运淘金鼠", "category": "电子游艺"}, {"name": "奇幻糖果岛", "category": "电子游艺"}, {"name": "疯狂科学家", "category": "电子游艺"}, {"name": "金饺子", "category": "电子游艺"}, {"name": "金钱侠", "category": "电子游艺"}, {"name": "幸运凤", "category": "电子游艺"}, {"name": "龙王", "category": "电子游艺"}, {"name": "魔术秀", "category": "电子游艺"}, {"name": "江山美人", "category": "电子游艺"}, {"name": "关公", "category": "电子游艺"}, {"name": "变脸II", "category": "电子游艺"}, {"name": "芝麻开门II", "category": "电子游艺"}, {"name": "唐伯虎点秋香II", "category": "电子游艺"}, {"name": "马上有钱", "category": "电子游艺"}, {"name": "喜洋羊", "category": "电子游艺"}, {"name": "小玛莉", "category": "电子游艺"}, {"name": "新年快乐", "category": "电子游艺"}, {"name": "飞禽走兽", "category": "电子游艺"}, {"name": "啤酒大亨", "category": "电子游艺"}, {"name": "花果山传奇", "category": "电子游艺"}, {"name": "超激发水果盘", "category": "电子游艺"}, {"name": "疯狂金刚", "category": "电子游艺"}, {"name": "发财足球王", "category": "电子游艺"}, {"name": "星际爆赏", "category": "电子游艺"}, {"name": "烟花爆赏", "category": "电子游艺"}, {"name": "射门", "category": "电子游艺"}, {"name": "弹珠台", "category": "电子游艺"}, {"name": "疯狂打地鼠", "category": "电子游艺"}, {"name": "小猪银行Tap Tap", "category": "电子游艺"}, {"name": "穿梭吧小鸡", "category": "电子游艺"}], "LEG": [{"name": "百人炸金花", "category": "棋牌游戏"}, {"name": "鱼耀龙门", "category": "电子游艺"}, {"name": "好友房抢庄牛牛", "category": "棋牌游戏"}, {"name": "好友房德州扑克", "category": "棋牌游戏"}, {"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "疯狂牛牛", "category": "棋牌游戏"}, {"name": "赌场扑克", "category": "棋牌游戏"}, {"name": "金牌抢庄牛牛", "category": "棋牌游戏"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "欧式轮盘", "category": "电子游艺"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "好友包房", "category": "棋牌游戏"}, {"name": "百鬼夜行", "category": "电子游艺"}, {"name": "超级航海王", "category": "捕鱼游戏"}, {"name": "看三张抢庄牛牛", "category": "棋牌游戏"}, {"name": "石头剪子布", "category": "棋牌游戏"}, {"name": "幽浮大进击", "category": "捕鱼游戏"}, {"name": "龙虎斗", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "森林舞会", "category": "棋牌游戏"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "红黑大战", "category": "棋牌游戏"}, {"name": "十三水", "category": "棋牌游戏"}, {"name": "比大小", "category": "棋牌游戏"}, {"name": "铸剑", "category": "电子游艺"}, {"name": "炸金花", "category": "棋牌游戏"}, {"name": "极速炸金花", "category": "棋牌游戏"}, {"name": "大富翁宾果", "category": "电子游艺"}, {"name": "捕鱼大作战", "category": "捕鱼游戏"}, {"name": "开运金龙", "category": "捕鱼游戏"}, {"name": "21点", "category": "棋牌游戏"}, {"name": "斗地主", "category": "棋牌游戏"}, {"name": "德州扑克", "category": "棋牌游戏"}, {"name": "掼蛋", "category": "棋牌游戏"}, {"name": "二八杠", "category": "棋牌游戏"}, {"name": "抢庄牌九", "category": "棋牌游戏"}, {"name": "二人麻将", "category": "棋牌游戏"}, {"name": "血战到底", "category": "棋牌游戏"}, {"name": "跑得快", "category": "棋牌游戏"}, {"name": "看四张抢庄牛牛", "category": "棋牌游戏"}, {"name": "癞子牛牛", "category": "棋牌游戏"}, {"name": "宝石消消乐", "category": "电子游艺"}, {"name": "抢庄选三张", "category": "棋牌游戏"}, {"name": "欢乐炸金花", "category": "棋牌游戏"}], "Choice": [{"name": "Choice视讯", "category": "真人视讯"}], "BG": [{"name": "BG视讯", "category": "真人视讯"}, {"name": "捕鱼大师", "category": "捕鱼游戏"}, {"name": "西游捕鱼", "category": "捕鱼游戏"}], "KY": [{"name": "抢庄牛牛", "category": "棋牌游戏"}, {"name": "色色百家乐", "category": "棋牌游戏"}, {"name": "炸金花", "category": "棋牌游戏"}, {"name": "21点", "category": "棋牌游戏"}, {"name": "幸运熊猫", "category": "棋牌游戏"}, {"name": "三国", "category": "棋牌游戏"}, {"name": "黑神话悟空", "category": "棋牌游戏"}, {"name": "矮人矿坑", "category": "棋牌游戏"}, {"name": "喜相逢", "category": "棋牌游戏"}, {"name": "荒野逃生", "category": "棋牌游戏"}, {"name": "王者荣耀", "category": "棋牌游戏"}, {"name": "财神发发发", "category": "棋牌游戏"}, {"name": "鬼吹灯", "category": "棋牌游戏"}, {"name": "金虎报吉", "category": "棋牌游戏"}, {"name": "财神到", "category": "棋牌游戏"}, {"name": "祥狮献瑞", "category": "棋牌游戏"}, {"name": "大力神槌", "category": "棋牌游戏"}, {"name": "炸财神", "category": "棋牌游戏"}, {"name": "KY体育", "category": "体育投注"}, {"name": "二人麻将", "category": "棋牌游戏"}, {"name": "抢庄牌九", "category": "棋牌游戏"}, {"name": "三公", "category": "棋牌游戏"}, {"name": "黑神话百人牛牛", "category": "棋牌游戏"}, {"name": "百人牛牛", "category": "棋牌游戏"}, {"name": "森林舞会", "category": "棋牌游戏"}, {"name": "百家乐", "category": "棋牌游戏"}, {"name": "文房四宝", "category": "棋牌游戏"}, {"name": "绝代皇后", "category": "棋牌游戏"}, {"name": "龙虎", "category": "棋牌游戏"}, {"name": "看牌抢庄牛牛", "category": "棋牌游戏"}, {"name": "通比牛牛", "category": "棋牌游戏"}, {"name": "马来西亚牛牛", "category": "棋牌游戏"}, {"name": "跑得快", "category": "棋牌游戏"}, {"name": "龙年行大运", "category": "棋牌游戏"}, {"name": "雀神", "category": "棋牌游戏"}, {"name": "后羿射日", "category": "棋牌游戏"}, {"name": "水果炸弹", "category": "棋牌游戏"}, {"name": "生存者", "category": "棋牌游戏"}, {"name": "新年到戳戳乐", "category": "棋牌游戏"}, {"name": "找地鼠", "category": "棋牌游戏"}, {"name": "鱼虾蟹", "category": "棋牌游戏"}, {"name": "癩子牛牛", "category": "棋牌游戏"}, {"name": "闪电二十一点", "category": "棋牌游戏"}, {"name": "富贵三张", "category": "棋牌游戏"}, {"name": "炸金牛", "category": "棋牌游戏"}, {"name": "百人骰宝", "category": "棋牌游戏"}, {"name": "奔驰宝马", "category": "棋牌游戏"}, {"name": "万人炸金花", "category": "棋牌游戏"}, {"name": "金鲨银鲨", "category": "棋牌游戏"}, {"name": "掼蛋 【体验房】", "category": "棋牌游戏"}, {"name": "水果机", "category": "棋牌游戏"}, {"name": "押宝抢庄牛牛", "category": "棋牌游戏"}, {"name": "单挑牛牛", "category": "棋牌游戏"}, {"name": "马战竞猜", "category": "棋牌游戏"}, {"name": "二人斗地主", "category": "棋牌游戏"}, {"name": "幸运夺宝", "category": "棋牌游戏"}, {"name": "港式梭哈", "category": "棋牌游戏"}, {"name": "搏一搏", "category": "棋牌游戏"}, {"name": "闪电轮盘", "category": "棋牌游戏"}, {"name": "幸运转盘", "category": "棋牌游戏"}, {"name": "血流成河", "category": "棋牌游戏"}, {"name": "十三水", "category": "棋牌游戏"}, {"name": "德州扑克", "category": "棋牌游戏"}, {"name": "斗地主", "category": "棋牌游戏"}, {"name": "捕鱼传说之李逵捕鱼", "category": "捕鱼游戏"}, {"name": "金元捕鱼", "category": "捕鱼游戏"}, {"name": "红包捕鱼", "category": "捕鱼游戏"}, {"name": "二八杠", "category": "棋牌游戏"}, {"name": "澳门百家乐幸运六", "category": "棋牌游戏"}, {"name": "欧式轮盘", "category": "棋牌游戏"}, {"name": "极速炸金花", "category": "棋牌游戏"}, {"name": "决胜21点世足特别版", "category": "棋牌游戏"}, {"name": "贝洛特", "category": "棋牌游戏"}, {"name": "比大小", "category": "棋牌游戏"}, {"name": "极速牛牛", "category": "棋牌游戏"}, {"name": "土耳其麻将", "category": "棋牌游戏"}]};
+
+    // 全局状态
+    let allGames = [];
+    let platforms = [];
+    let selectedPlatform = 'ALL';
+    let selectedCategory = 'ALL';
+    let searchKeyword = '';
+    let selectedGameIds = new Set();
+
+    // 维护范围：'game' (单一/指定游戏维护) | 'platform' (全平台维护)
+    let maintenanceScope = 'game';
+    let fullMaintenancePlatforms = new Set();
+
+    // 格式化日期时间为 datetime-local 所需字符串 YYYY-MM-DDTHH:mm
+    function toDateTimeLocalStr(date) {
+      const pad = n => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    // 格式化日期时间为公告格式：xx月xx日 xx:xx (GMT+8)，空值按 fallback 返回（开始时间=即刻，结束时间=待定）
+    function formatAnnouncementTime(dtLocalStr, fallbackText) {
+      if (!dtLocalStr) return fallbackText;
+      const d = new Date(dtLocalStr);
+      if (isNaN(d.getTime())) return fallbackText;
+      const pad = n => String(n).padStart(2, '0');
+      const month = pad(d.getMonth() + 1);
+      const day = pad(d.getDate());
+      const hour = pad(d.getHours());
+      const minute = pad(d.getMinutes());
+      return `${month}月${day}日 ${hour}:${minute} (GMT+8)`;
+    }
+
+    // 初始化默认时间
+    function initDefaultTimes() {
+      const now = new Date();
+      const start = new Date(now.getTime() + 2.5 * 3600 * 1000);
+      start.setMinutes(0, 0, 0);
+      const end = new Date(start.getTime() + 2 * 3600 * 1000);
+
+      document.getElementById('publishTime').value = toDateTimeLocalStr(now);
+      document.getElementById('startTime').value = toDateTimeLocalStr(start);
+      document.getElementById('endTime').value = toDateTimeLocalStr(end);
+    }
+
+    function setPublishNow() {
+      document.getElementById('publishTime').value = toDateTimeLocalStr(new Date());
+      renderAnnouncement();
+    }
+
+    function clearStartTime() {
+      document.getElementById('startTime').value = '';
+      renderAnnouncement();
+    }
+
+    function clearEndTime() {
+      document.getElementById('endTime').value = '';
+      renderAnnouncement();
+    }
+
+    // 初始化基础游戏库
+    function initData(rawDataObj) {
+      allGames = [];
+      platforms = Object.keys(rawDataObj);
+      let idx = 0;
+
+      platforms.forEach(platform => {
+        const list = rawDataObj[platform] || [];
+        list.forEach(item => {
+          const name = (item.name || '').trim();
+          const category = (item.category || '未分类').trim();
+          if (name) {
+            allGames.push({
+              id: `${platform}__${idx++}__${name}`,
+              platform: platform,
+              name: name,
+              category: category
+            });
+          }
+        });
+      });
+
+      selectedPlatform = 'ALL';
+      selectedCategory = 'ALL';
+      searchKeyword = '';
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').classList.remove('visible');
+      selectedGameIds.clear();
+
+      fullMaintenancePlatforms.clear();
+      if (platforms.length > 0) {
+        fullMaintenancePlatforms.add(platforms[0]);
+      }
+
+      document.getElementById('totalGamesBadge').textContent = `共 ${platforms.length} 个平台 / ${allGames.length} 款游戏`;
+      refreshUI();
+    }
+
+    // 切换维护范围（指定游戏 vs 全平台）
+    function setMaintenanceScope(scope) {
+      maintenanceScope = scope;
+      document.getElementById('modeGameBtn').classList.toggle('active', scope === 'game');
+      document.getElementById('modePlatformBtn').classList.toggle('active', scope === 'platform');
+      document.getElementById('selectedGamesSection').style.display = scope === 'game' ? 'block' : 'none';
+      document.getElementById('platformSelectRow').style.display = scope === 'platform' ? 'grid' : 'none';
+
+      if (scope === 'platform' && selectedPlatform !== 'ALL') {
+        fullMaintenancePlatforms.clear();
+        fullMaintenancePlatforms.add(selectedPlatform);
+      }
+      renderFullPlatformSelector();
+      renderAnnouncement();
+    }
+
+    function renderFullPlatformSelector() {
+      const container = document.getElementById('fullPlatformSelector');
+      if (!container) return;
+      container.innerHTML = '';
+      platforms.forEach(pf => {
+        const pill = document.createElement('div');
+        pill.className = `pill ${fullMaintenancePlatforms.has(pf) ? 'active' : ''}`;
+        pill.textContent = pf;
+        pill.onclick = () => {
+          if (fullMaintenancePlatforms.has(pf)) {
+            if (fullMaintenancePlatforms.size > 1) fullMaintenancePlatforms.delete(pf);
+          } else {
+            fullMaintenancePlatforms.add(pf);
+          }
+          renderFullPlatformSelector();
+          renderAnnouncement();
+        };
+        container.appendChild(pill);
+      });
+    }
+
+    // 获取当前平台范围下的可用游戏类型（对应 C 列）
+    function getAvailableCategories() {
+      const scopeGames = selectedPlatform === 'ALL'
+        ? allGames
+        : allGames.filter(g => g.platform === selectedPlatform);
+
+      const catCountMap = new Map();
+      scopeGames.forEach(g => {
+        catCountMap.set(g.category, (catCountMap.get(g.category) || 0) + 1);
+      });
+      return catCountMap;
+    }
+
+    // 渲染平台标签（条件1）
+    function renderPlatformPills() {
+      const container = document.getElementById('platformPills');
+      container.innerHTML = '';
+
+      const allPill = document.createElement('div');
+      allPill.className = `pill ${selectedPlatform === 'ALL' ? 'active' : ''}`;
+      allPill.innerHTML = `全部平台 <span class="count">${allGames.length}</span>`;
+      allPill.onclick = () => {
+        selectedPlatform = 'ALL';
+        validateCategorySelection();
+        refreshUI();
+      };
+      container.appendChild(allPill);
+
+      platforms.forEach(pf => {
+        const count = allGames.filter(g => g.platform === pf).length;
+        const pill = document.createElement('div');
+        pill.className = `pill ${selectedPlatform === pf ? 'active' : ''}`;
+        pill.innerHTML = `${pf} <span class="count">${count}</span>`;
+        pill.onclick = () => {
+          selectedPlatform = pf;
+          if (maintenanceScope === 'platform') {
+            fullMaintenancePlatforms.clear();
+            fullMaintenancePlatforms.add(pf);
+            renderFullPlatformSelector();
+          }
+          validateCategorySelection();
+          refreshUI();
+        };
+        container.appendChild(pill);
+      });
+    }
+
+    function validateCategorySelection() {
+      if (selectedCategory === 'ALL') return;
+      const catMap = getAvailableCategories();
+      if (!catMap.has(selectedCategory)) {
+        selectedCategory = 'ALL';
+      }
+    }
+
+    // 渲染游戏类型标签（条件2）
+    function renderCategoryPills() {
+      const container = document.getElementById('categoryPills');
+      container.innerHTML = '';
+
+      const catMap = getAvailableCategories();
+      const totalInScope = Array.from(catMap.values()).reduce((a, b) => a + b, 0);
+
+      const allCatPill = document.createElement('div');
+      allCatPill.className = `pill ${selectedCategory === 'ALL' ? 'active' : ''}`;
+      allCatPill.innerHTML = `全部类型 <span class="count">${totalInScope}</span>`;
+      allCatPill.onclick = () => {
+        selectedCategory = 'ALL';
+        refreshUI();
+      };
+      container.appendChild(allCatPill);
+
+      catMap.forEach((count, catName) => {
+        const pill = document.createElement('div');
+        pill.className = `pill ${selectedCategory === catName ? 'active' : ''}`;
+        pill.innerHTML = `${catName} <span class="count">${count}</span>`;
+        pill.onclick = () => {
+          selectedCategory = catName;
+          refreshUI();
+        };
+        container.appendChild(pill);
+      });
+    }
+
+    // 多条件过滤逻辑（支持同时筛选，也支持单独筛选）
+    function getFilteredGames() {
+      const kw = searchKeyword.trim().toLowerCase();
+      return allGames.filter(game => {
+        const matchPlatform = (selectedPlatform === 'ALL') || (game.platform === selectedPlatform);
+        const matchCategory = (selectedCategory === 'ALL') || (game.category === selectedCategory);
+        const matchName = !kw || game.name.toLowerCase().includes(kw);
+        return matchPlatform && matchCategory && matchName;
+      });
+    }
+
+    // 渲染游戏勾选网格
+    function renderGameGrid() {
+      const grid = document.getElementById('gameGrid');
+      const filtered = getFilteredGames();
+      document.getElementById('filteredCount').textContent = filtered.length;
+
+      const activeConds = [];
+      if (selectedPlatform !== 'ALL') activeConds.push(`平台: ${selectedPlatform}`);
+      if (selectedCategory !== 'ALL') activeConds.push(`类型: ${selectedCategory}`);
+      if (searchKeyword.trim()) activeConds.push(`关键字: "${searchKeyword.trim()}"`);
+      document.getElementById('activeFilterSummary').textContent =
+        activeConds.length ? `（条件：${activeConds.join(' + ')}）` : '（显示全部）';
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="empty-state">🔍 未找到符合当前筛选条件的游戏，请尝试调整筛选条件</div>`;
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      filtered.forEach(game => {
+        const isChecked = selectedGameIds.has(game.id);
+        const label = document.createElement('label');
+        label.className = `game-item ${isChecked ? 'checked' : ''}`;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = isChecked;
+        checkbox.onchange = () => {
+          if (checkbox.checked) {
+            selectedGameIds.add(game.id);
+            label.classList.add('checked');
+            if (maintenanceScope === 'platform') {
+              setMaintenanceScope('game');
+            }
+          } else {
+            selectedGameIds.delete(game.id);
+            label.classList.remove('checked');
+          }
+          updateSelectedUI();
+        };
+
+        const info = document.createElement('div');
+        info.className = 'game-info';
+        info.innerHTML = `
+          <span class="game-name">${escapeHtml(game.name)}</span>
+          <div class="game-meta">
+            <span class="tag tag-platform">${escapeHtml(game.platform)}</span>
+            <span class="tag">${escapeHtml(game.category)}</span>
+          </div>
+        `;
+
+        label.appendChild(checkbox);
+        label.appendChild(info);
+        fragment.appendChild(label);
+      });
+
+      grid.innerHTML = '';
+      grid.appendChild(fragment);
+    }
+
+    function updateSelectedUI() {
+      const selectedList = allGames.filter(g => selectedGameIds.has(g.id));
+      document.getElementById('selectedCountHeader').textContent = selectedList.length;
+      document.getElementById('selectedCountLabel').textContent = selectedList.length;
+
+      const box = document.getElementById('selectedTagsBox');
+      if (selectedList.length === 0) {
+        box.innerHTML = `<span style="color:var(--text-muted);font-size:12px;">暂未勾选任何游戏，请在左侧点击勾选或导入 Excel 自动识别...</span>`;
+      } else {
+        box.innerHTML = selectedList.map(g => `
+          <span class="selected-chip">
+            <span>[${escapeHtml(g.platform)}] ${escapeHtml(g.name)}</span>
+            <button class="remove-chip" title="移除" onclick="removeSingleGame('${g.id}')">×</button>
+          </span>
+        `).join('');
+      }
+
+      renderAnnouncement();
+    }
+
+    function removeSingleGame(id) {
+      selectedGameIds.delete(id);
+      renderGameGrid();
+      updateSelectedUI();
+    }
+
+    function selectAllFiltered() {
+      const filtered = getFilteredGames();
+      if (filtered.length === 0) return;
+      filtered.forEach(g => selectedGameIds.add(g.id));
+      if (maintenanceScope === 'platform') setMaintenanceScope('game');
+      renderGameGrid();
+      updateSelectedUI();
+      showToast(`已勾选当前筛选出的 ${filtered.length} 款游戏`);
+    }
+
+    function deselectAllFiltered() {
+      const filtered = getFilteredGames();
+      if (filtered.length === 0) return;
+      filtered.forEach(g => selectedGameIds.delete(g.id));
+      renderGameGrid();
+      updateSelectedUI();
+      showToast(`已取消当前筛选出的 ${filtered.length} 款游戏`);
+    }
+
+    function clearAllSelected() {
+      selectedGameIds.clear();
+      renderGameGrid();
+      updateSelectedUI();
+      showToast('已清空全部勾选');
+    }
+
+    function resetAllFilters() {
+      selectedPlatform = 'ALL';
+      selectedCategory = 'ALL';
+      searchKeyword = '';
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').classList.remove('visible');
+      refreshUI();
+      showToast('已重置所有筛选条件');
+    }
+
+    // 核心：根据发布时间与开始维护时间差自动判定「例行维护通知」或「临时维护通知」
+    function determineMaintenanceType() {
+      const override = document.getElementById('noticeTypeOverride').value;
+      const pubStr = document.getElementById('publishTime').value;
+      const startStr = document.getElementById('startTime').value;
+      const diffEl = document.getElementById('timeDiffText');
+      const badgeEl = document.getElementById('noticeTypeBadge');
+
+      let isRoutine = false;
+      let reasonText = '';
+
+      if (!startStr) {
+        isRoutine = false;
+        reasonText = '未侦测到/未指定开始时间（开始=即刻）→ 判定为【临时维护通知】';
+      } else {
+        const pubDate = pubStr ? new Date(pubStr) : new Date();
+        const startDate = new Date(startStr);
+        const diffMs = startDate.getTime() - pubDate.getTime();
+        const diffHours = diffMs / (1000 * 3600);
+
+        if (diffHours >= 2) {
+          isRoutine = true;
+          reasonText = `距开始维护约 ${diffHours.toFixed(1)} 小时（≥ 2小时）→ 判定为【例行维护通知】`;
+        } else {
+          isRoutine = false;
+          reasonText = diffHours >= 0
+            ? `距开始维护仅 ${diffHours.toFixed(1)} 小时（< 2小时）→ 判定为【临时维护通知】`
+            : `开始时间早于发布时间（< 2小时）→ 判定为【临时维护通知】`;
+        }
+      }
+
+      if (override === 'routine') {
+        isRoutine = true;
+        reasonText += '（已手动锁定为例行维护）';
+      } else if (override === 'temp') {
+        isRoutine = false;
+        reasonText += '（已手动锁定为临时维护）';
+      }
+
+      const noticeTitle = isRoutine ? '例行维护通知' : '临时维护通知';
+      diffEl.textContent = reasonText;
+      badgeEl.textContent = noticeTitle;
+      badgeEl.className = `badge ${isRoutine ? 'badge-routine' : 'badge-temp'}`;
+
+      return noticeTitle;
+    }
+
+    // 严格按照指定格式生成公告文本（无开始时间=即刻，无结束时间=待定）
+    function renderAnnouncement() {
+      const noticeTitle = determineMaintenanceType();
+      const startStr = document.getElementById('startTime').value;
+      const endStr = document.getElementById('endTime').value;
+      const startFormatted = formatAnnouncementTime(startStr, '即刻');
+      const endFormatted = formatAnnouncementTime(endStr, '待定');
+      const previewEl = document.getElementById('announcementPreview');
+
+      // 模式一：全平台维护格式
+      if (maintenanceScope === 'platform') {
+        const targetPlatforms = Array.from(fullMaintenancePlatforms);
+        if (targetPlatforms.length === 0) {
+          previewEl.value = '【提示】请先选择需要进行全平台维护的平台名称。';
+          return;
+        }
+        const platformStr = targetPlatforms.map(p => `【${p}】`).join('');
+        previewEl.value = `尊敬的客户您好，兹通知您${platformStr}${noticeTitle}
+ 
+维护平台： ${platformStr}
+开始时间：${startFormatted}
+完成时间：${endFormatted}
+ 
+温馨提醒: 
+◎维护期间内，维护产品将无法使用。
+◎维护时间有任何异动，将会另行通知。
+ 
+若有任何问题欢迎随时与我们联系，谢谢您！`;
+        return;
+      }
+
+      // 模式二：单一 / 指定游戏维护格式
+      const selectedList = allGames.filter(g => selectedGameIds.has(g.id));
+      if (selectedList.length === 0) {
+        previewEl.value = '【提示】请先在左侧勾选需要维护的游戏，或点击顶部「导入维护 Excel」自动侦测匹配已有游戏。';
+        return;
+      }
+
+      const uniquePlatforms = Array.from(new Set(selectedList.map(g => g.platform)));
+      const platformStr = uniquePlatforms.map(p => `【${p}】`).join('');
+
+      const titleGameTag = '【单一游戏】';
+      const gameLineStr = selectedList.map(g => `【${g.name}】`).join('、');
+
+      previewEl.value = `尊敬的客户您好，兹通知您${platformStr}${titleGameTag}${noticeTitle}
+ 
+维护平台： ${platformStr}
+维护游戏： ${gameLineStr}
+开始时间：${startFormatted}
+结束时间：${endFormatted}
+ 
+温馨提醒: 
+◎维护期间内，维护产品将无法使用。
+◎维护时间有任何异动，将会另行通知。
+ 
+若有任何问题欢迎随时与我们联系，谢谢您！`;
+    }
+
+    function refreshUI() {
+      renderPlatformPills();
+      renderCategoryPills();
+      renderFullPlatformSelector();
+      renderGameGrid();
+      updateSelectedUI();
+    }
+
+    // 搜索框监听
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+    searchInput.addEventListener('input', (e) => {
+      searchKeyword = e.target.value;
+      clearSearchBtn.classList.toggle('visible', searchKeyword.length > 0);
+      renderGameGrid();
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      searchKeyword = '';
+      searchInput.value = '';
+      clearSearchBtn.classList.remove('visible');
+      renderGameGrid();
+    });
+
+    // =========================================================================
+    // 核心：智能解析导入的 Excel 维护公告内容
+    // 规则：
+    // 1. 优先侦测简体中文内容；若无简体中文内容，则检测英文内容
+    // 2. 自动侦测内容中的起止时间；若无侦测到时间，则开始时间="即刻"，结束时间="待定"
+    // 3. 绝不新增新的游戏，仅匹配原有列表（allGames）中已有的游戏，没有的直接忽略
+    // =========================================================================
+
+    // 判断字符串是否包含中文字符（优先用于识别简体中文区域）
+    function hasChinese(str) {
+      return /[一-龥]/.test(str);
+    }
+
+    // 繁简常见差异字辅助过滤：若单元格主要为繁体专属字且另有简体单元格，优先选简体
+    const TRAD_ONLY_CHARS = /[維護遊戲開始結束時間通知尊敬客戶茲產品無法異動將另行聯繫謝謝歡迎體驗暢玩]/;
+    function isSimplifiedPreferred(str) {
+      return hasChinese(str) && !TRAD_ONLY_CHARS.test(str);
+    }
+
+    // 判断是否包含有意义的英文内容
+    function hasEnglish(str) {
+      return /[a-zA-Z]{2,}/.test(str);
+    }
+
+    // 标准化名称以便精准比对（去除空格、全半角符号差异、转小写）
+    function normalizeForMatch(str) {
+      return String(str)
+        .toLowerCase()
+        .replace(/[\s\-_：:【】\[\]（）()·・'".,，。!！?？]/g, '');
+    }
+
+    // 从单个文本片段提取日期时间对象（支持 YYYY-MM-DD HH:mm、M/D/YY H:mm、MM/DD/YYYY HH:mm、MM月DD日 HH:mm 等）
+    function parseSingleDateTime(text) {
+      const s = String(text ?? '').trim();
+      if (!s) return null;
+      const currentYear = new Date().getFullYear();
+
+      // 1. YYYY-MM-DD HH:mm 或 YYYY/MM/DD HH:mm 或 YYYY年MM月DD日 HH:mm
+      let m = s.match(/(20\d{2})[年\-\/\.](1[0-2]|0?[1-9])[月\-\/\.](3[01]|[12]\d|0?[1-9])日?\s*(?:\([^\)]*\))?\s*([01]?\d|2[0-3])[:：]([0-5]\d)(?:[:：][0-5]\d)?/);
+      if (m) {
+        const dt = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10), parseInt(m[4], 10), parseInt(m[5], 10));
+        if (!isNaN(dt.getTime())) return dt;
+      }
+
+      // 2. 美式月/日/年（Excel 默认 m/d/yy h:mm 或 mm/dd/yyyy hh:mm，例如 "11/24/26 8:00" 或 "8/11/2026 23:25"）
+      m = s.match(/(?:^|[^\d])(1[0-2]|0?[1-9])[\/\-](3[01]|[12]\d|0?[1-9])[\/\-]((?:20)?\d{2})\s*(?:\([^\)]*\))?\s*([01]?\d|2[0-3])[:：]([0-5]\d)(?:[:：][0-5]\d)?/);
+      if (m) {
+        let y = parseInt(m[3], 10);
+        if (y < 100) y += 2000;
+        const dt = new Date(y, parseInt(m[1], 10) - 1, parseInt(m[2], 10), parseInt(m[4], 10), parseInt(m[5], 10));
+        if (!isNaN(dt.getTime())) return dt;
+      }
+
+      // 3. 无年份 MM月DD日 HH:mm 或 MM/DD HH:mm
+      m = s.match(/(?:^|[^\d年\-\/\.])(1[0-2]|0?[1-9])[月\-\/](3[01]|[12]\d|0?[1-9])日?\s*(?:\([^\)]*\))?\s*([01]?\d|2[0-3])[:：]([0-5]\d)/);
+      if (m) {
+        const dt = new Date(currentYear, parseInt(m[1], 10) - 1, parseInt(m[2], 10), parseInt(m[3], 10), parseInt(m[4], 10));
+        if (!isNaN(dt.getTime())) return dt;
+      }
+
+      return null;
+    }
+
+    // 从多行文本中提取所有时间点
+    function extractDateTimesFromText(text) {
+      const results = [];
+      const currentYear = new Date().getFullYear();
+      let m;
+
+      // 模式A: 2026-11-24 08:00
+      const fullRegex = /(20\d{2})[年\-\/\.](1[0-2]|0?[1-9])[月\-\/\.](3[01]|[12]\d|0?[1-9])日?\s*(?:\([^\)]*\))?\s*([01]?\d|2[0-3])[:：]([0-5]\d)(?:[:：][0-5]\d)?/g;
+      while ((m = fullRegex.exec(text)) !== null) {
+        const dt = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10), parseInt(m[4], 10), parseInt(m[5], 10));
+        if (!isNaN(dt.getTime())) results.push({ index: m.index, date: dt });
+      }
+
+      // 模式B: 美式 M/D/YY H:mm 或 MM/DD/YYYY HH:mm (如 "11/24/26 8:00")
+      const usRegex = /(?:^|[^\d])(1[0-2]|0?[1-9])[\/\-](3[01]|[12]\d|0?[1-9])[\/\-]((?:20)?\d{2})\s*(?:\([^\)]*\))?\s*([01]?\d|2[0-3])[:：]([0-5]\d)(?:[:：][0-5]\d)?/g;
+      while ((m = usRegex.exec(text)) !== null) {
+        const matchStart = m.index;
+        if (results.some(r => Math.abs(r.index - matchStart) < 8)) continue;
+        let y = parseInt(m[3], 10);
+        if (y < 100) y += 2000;
+        const dt = new Date(y, parseInt(m[1], 10) - 1, parseInt(m[2], 10), parseInt(m[4], 10), parseInt(m[5], 10));
+        if (!isNaN(dt.getTime())) results.push({ index: matchStart, date: dt });
+      }
+
+      // 模式C: 无年份 11月24日 08:00 或 11/24 8:00
+      const shortRegex = /(?:^|[^\d年\-\/\.])(1[0-2]|0?[1-9])[月\-\/](3[01]|[12]\d|0?[1-9])日?\s*(?:\([^\)]*\))?\s*([01]?\d|2[0-3])[:：]([0-5]\d)/g;
+      while ((m = shortRegex.exec(text)) !== null) {
+        const matchStart = m.index;
+        if (results.some(r => Math.abs(r.index - matchStart) < 8)) continue;
+        const dt = new Date(currentYear, parseInt(m[1], 10) - 1, parseInt(m[2], 10), parseInt(m[3], 10), parseInt(m[4], 10));
+        if (!isNaN(dt.getTime())) results.push({ index: matchStart, date: dt });
+      }
+
+      results.sort((a, b) => a.index - b.index);
+      const uniqueDates = [];
+      results.forEach(item => {
+        if (uniqueDates.length === 0 || uniqueDates[uniqueDates.length - 1].getTime() !== item.date.getTime()) {
+          uniqueDates.push(item.date);
+        }
+      });
+
+      if (uniqueDates.length === 1) {
+        const rangeEndRegex = /([01]?\d|2[0-3])[:：]([0-5]\d)\s*(?:[\-~至到—–]|to)\s*([01]?\d|2[0-3])[:：]([0-5]\d)/i;
+        const rm = rangeEndRegex.exec(text);
+        if (rm) {
+          const base = uniqueDates[0];
+          const endDt = new Date(base.getFullYear(), base.getMonth(), base.getDate(), parseInt(rm[3], 10), parseInt(rm[4], 10));
+          if (endDt.getTime() < base.getTime()) endDt.setDate(endDt.getDate() + 1);
+          if (endDt.getTime() !== base.getTime()) uniqueDates.push(endDt);
+        }
+      }
+
+      return uniqueDates;
+    }
+
+    document.getElementById('excelUploader').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+
+          // 1. 收集所有工作表的非空文本单元格，并按语言分类
+          const simplifiedCells = []; // 简体中文内容
+          const otherChineseCells = []; // 其他中文内容（兜底）
+          const englishCells = []; // 英文内容
+
+          workbook.SheetNames.forEach(sheetName => {
+            const worksheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+            rows.forEach(row => {
+              if (!Array.isArray(row)) return;
+              row.forEach(cell => {
+                const text = String(cell ?? '').trim();
+                if (!text) return;
+                if (isSimplifiedPreferred(text)) {
+                  simplifiedCells.push(text);
+                } else if (hasChinese(text)) {
+                  otherChineseCells.push(text);
+                } else if (hasEnglish(text)) {
+                  englishCells.push(text);
+                }
+              });
+            });
+          });
+
+          // 2. 语言优先级选择：优先简体中文 -> 其次其他中文 -> 若无中文则检测英文内容
+          let targetCells = [];
+          let detectedLangLabel = '';
+          if (simplifiedCells.length > 0) {
+            targetCells = simplifiedCells;
+            detectedLangLabel = '简体中文内容';
+          } else if (otherChineseCells.length > 0) {
+            targetCells = otherChineseCells;
+            detectedLangLabel = '中文内容';
+          } else if (englishCells.length > 0) {
+            targetCells = englishCells;
+            detectedLangLabel = '英文内容（未检测到中文）';
+          } else {
+            showToast('⚠️ 未在 Excel 中侦测到有效的中文或英文文本内容');
+            return;
+          }
+
+          const combinedText = targetCells.join('\n');
+          const normalizedCombined = normalizeForMatch(combinedText);
+
+          // 3. 优先侦测「文件名称」(file.name) 中是否写到平台名称（如 CQ9、SSP）
+          const fileNameRaw = file.name || '';
+          const fileNameNoExt = fileNameRaw.replace(/\.[^.]+$/, '');
+          const sortedPlatformsByLen = [...platforms].sort((a, b) => b.length - a.length);
+          const platformsFromFileName = sortedPlatformsByLen.filter(pf => {
+            // 文件名中出现平台名（兼容中英文连写，如 "CQ9维护公告"、"PP_1123"、"熊猫体育"）
+            const pfRegex = new RegExp(pf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+            return pfRegex.test(fileNameNoExt);
+          });
+
+          // 若文件名未写平台，再回退侦测内容或工作表名中的平台
+          const platformsFromContent = platforms.filter(pf => {
+            const pfRegex = new RegExp(`(^|[^a-zA-Z0-9])${pf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zA-Z0-9]|$)`, 'i');
+            return pfRegex.test(combinedText) || pfRegex.test(workbook.SheetNames.join(' '));
+          });
+
+          const mentionedPlatforms = platformsFromFileName.length > 0 ? platformsFromFileName : platformsFromContent;
+
+          // 4. 仅匹配原有列表（allGames）中已有的游戏，绝不新增任何新游戏
+          // 先构建单元格精确集合与全文包含匹配，按名称长度降序匹配避免短词误伤
+          const cellNormSet = new Set(targetCells.map(c => normalizeForMatch(c)));
+          const sortedExistingGames = [...allGames].sort((a, b) => b.name.length - a.name.length);
+          const matchedGames = [];
+          const matchedNameTracker = new Set();
+
+          sortedExistingGames.forEach(game => {
+            const normName = normalizeForMatch(game.name);
+            if (!normName) return;
+
+            // 若文档明确指定了平台且该游戏不属于指定平台，跳过同名跨平台冲突
+            if (mentionedPlatforms.length > 0 && !mentionedPlatforms.includes(game.platform)) {
+              return;
+            }
+
+            // 规则：单元格精确等于游戏名，或（游戏名长度>=2且在侦测到的文本中出现）
+            const isExactCell = cellNormSet.has(normName);
+            const isSubstrMatch = normName.length >= 2 && normalizedCombined.includes(normName);
+
+            if (isExactCell || isSubstrMatch) {
+              // 防止同一款游戏重复计入
+              const uniqueKey = `${game.platform}__${game.name}`;
+              if (!matchedNameTracker.has(uniqueKey)) {
+                matchedNameTracker.add(uniqueKey);
+                matchedGames.push(game);
+              }
+            }
+          });
+
+          // 5. 自动侦测内容中的时间（支持表头列定位 + 美式日期 M/D/YY H:mm + 全文扫描）
+          let detectedStartDate = null;
+          let detectedEndDate = null;
+          let hasExplicitPendingEnd = false;
+
+          // 5.1 优先探测是否存在「开始时间 / Start time」和「结束时间 / End time」表头列
+          workbook.SheetNames.forEach(sn => {
+            const ws = workbook.Sheets[sn];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+            if (!rows || rows.length < 2) return;
+
+            for (let r = 0; r < Math.min(5, rows.length); r++) {
+              const headerRow = rows[r];
+              const startCol = headerRow.findIndex(c => /开始时间|start\s*time/i.test(String(c)));
+              const endCol = headerRow.findIndex(c => /结束时间|完成时间|end\s*time/i.test(String(c)));
+
+              if (startCol !== -1 || endCol !== -1) {
+                const startCandidates = [];
+                const endCandidates = [];
+                for (let i = r + 1; i < rows.length; i++) {
+                  const row = rows[i];
+                  if (!row) continue;
+                  if (startCol !== -1 && row[startCol]) {
+                    const dt = parseSingleDateTime(row[startCol]);
+                    if (dt) startCandidates.push(dt);
+                  }
+                  if (endCol !== -1 && row[endCol]) {
+                    const endCellStr = String(row[endCol]).trim();
+                    const dtEnd = parseSingleDateTime(endCellStr);
+                    if (dtEnd) {
+                      endCandidates.push(dtEnd);
+                    } else if (/另行通知|待定|further\s*notice|tbd/i.test(endCellStr)) {
+                      hasExplicitPendingEnd = true;
+                    }
+                  }
+                }
+                // 若表中有多行历史+最新记录，取最新（最晚）的维护开始时间
+                if (startCandidates.length > 0) {
+                  startCandidates.sort((a, b) => b.getTime() - a.getTime());
+                  detectedStartDate = startCandidates[0];
+                }
+                if (endCandidates.length > 0) {
+                  endCandidates.sort((a, b) => b.getTime() - a.getTime());
+                  detectedEndDate = endCandidates[0];
+                }
+                break;
+              }
+            }
+          });
+
+          // 5.2 若无明确表头列，则从选定语言文本及全表文本中扫描时间点
+          if (!detectedStartDate) {
+            let detectedDates = extractDateTimesFromText(combinedText);
+            if (detectedDates.length === 0) {
+              const allRawText = [];
+              workbook.SheetNames.forEach(sn => {
+                const ws = workbook.Sheets[sn];
+                const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+                rows.forEach(r => r.forEach(c => { if (c) allRawText.push(String(c)); }));
+              });
+              detectedDates = extractDateTimesFromText(allRawText.join('\n'));
+            }
+            if (detectedDates.length >= 2) {
+              detectedStartDate = detectedDates[0];
+              detectedEndDate = detectedDates[1];
+            } else if (detectedDates.length === 1) {
+              detectedStartDate = detectedDates[0];
+            }
+          }
+
+          // 构造统一数组供提示文案使用
+          const detectedDates = [];
+          if (detectedStartDate) detectedDates.push(detectedStartDate);
+          if (detectedEndDate) detectedDates.push(detectedEndDate);
+
+          // 应用侦测到的时间（若无侦测到时间，则清空输入框 -> 开始时间="即刻"，结束时间="待定"）
+          document.getElementById('startTime').value = detectedStartDate ? toDateTimeLocalStr(detectedStartDate) : '';
+          document.getElementById('endTime').value = detectedEndDate ? toDateTimeLocalStr(detectedEndDate) : '';
+
+          // 6. 更新勾选状态、平台筛选器与维护模式（不修改 allGames 基础列表，仅勾选原有列表匹配项）
+          selectedGameIds.clear();
+          if (platformsFromFileName.length === 1) {
+            selectedPlatform = platformsFromFileName[0];
+            validateCategorySelection();
+          } else if (mentionedPlatforms.length === 1) {
+            selectedPlatform = mentionedPlatforms[0];
+            validateCategorySelection();
+          } else {
+            selectedPlatform = 'ALL';
+            validateCategorySelection();
+          }
+
+          if (matchedGames.length > 0) {
+            matchedGames.forEach(g => selectedGameIds.add(g.id));
+            setMaintenanceScope('game');
+          } else if (mentionedPlatforms.length > 0) {
+            // 若未匹配到具体游戏但侦测到了已知平台，自动切换为全平台维护格式
+            fullMaintenancePlatforms.clear();
+            mentionedPlatforms.forEach(p => fullMaintenancePlatforms.add(p));
+            setMaintenanceScope('platform');
+          } else {
+            setMaintenanceScope('game');
+          }
+
+          refreshUI();
+
+          // 7. 展示详细的侦测反馈横幅
+          const platformDesc = platformsFromFileName.length > 0
+            ? `文件名侦测到平台：<strong>${platformsFromFileName.join('、')}</strong>（已锁定该平台）`
+            : mentionedPlatforms.length > 0
+              ? `内容侦测到平台：<strong>${mentionedPlatforms.join('、')}</strong>`
+              : `未指定单一平台（全库匹配）`;
+
+          const timeDesc = detectedDates.length >= 2
+            ? `侦测到起止时间（开始：${formatAnnouncementTime(toDateTimeLocalStr(detectedDates[0]), '即刻')}，结束：${formatAnnouncementTime(toDateTimeLocalStr(detectedDates[1]), '待定')}）`
+            : detectedDates.length === 1
+              ? `侦测到开始时间（${formatAnnouncementTime(toDateTimeLocalStr(detectedDates[0]), '即刻')}），结束时间未侦测（设为「待定」）`
+              : `未侦测到具体时间（开始时间已设为「即刻」，结束时间已设为「待定」）`;
+
+          const gameDesc = matchedGames.length > 0
+            ? `匹配到该平台原有列表中的 <strong>${matchedGames.length}</strong> 款游戏`
+            : `未匹配到特定游戏（已切换为全平台维护格式）`;
+
+          const banner = document.getElementById('importBanner');
+          document.getElementById('importSummaryText').innerHTML =
+            `✅ <strong>Excel 导入侦测完成：</strong>${platformDesc} ｜ 优先识别 <strong>${detectedLangLabel}</strong> ｜ ${gameDesc} ｜ ${timeDesc}`;
+          banner.classList.add('visible');
+
+          showToast(`导入解析完成：匹配到 ${matchedGames.length} 款已有游戏`);
+        } catch (err) {
+          console.error(err);
+          showToast('Excel 解析失败，请检查文件格式是否正确');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      e.target.value = '';
+    });
+
+    function copyAnnouncement() {
+      const text = document.getElementById('announcementPreview').value;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('✅ 公告内容已复制到剪贴板！');
+      }).catch(() => {
+        const textarea = document.getElementById('announcementPreview');
+        textarea.select();
+        document.execCommand('copy');
+        showToast('✅ 公告内容已复制到剪贴板！');
+      });
+    }
+
+    function downloadTxt() {
+      const text = document.getElementById('announcementPreview').value;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `维护公告_${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+
+    // =========================================================================
+    // 主分页切换逻辑（维护公告 vs 活动公告）
+    // =========================================================================
+    function switchMainTab(tabName) {
+      const isMaint = tabName === 'maintenance';
+      document.getElementById('tabBtnMaintenance').classList.toggle('active', isMaint);
+      document.getElementById('tabBtnActivity').classList.toggle('active', !isMaint);
+      document.getElementById('tabMaintenance').classList.toggle('active', isMaint);
+      document.getElementById('tabActivity').classList.toggle('active', !isMaint);
+    }
+
+    // =========================================================================
+    // 活动公告系统：网址自动侦测、智能解析与标准格式生成
+    // =========================================================================
+    function initActivityTab() {
+      const sel = document.getElementById('actPlatformSelect');
+      if (sel) {
+        sel.innerHTML = '<option value="">-- 选择平台 --</option>';
+        platforms.forEach(pf => {
+          const opt = document.createElement('option');
+          opt.value = pf;
+          opt.textContent = pf;
+          sel.appendChild(opt);
+        });
+      }
+      renderActivityAnnouncement();
+    }
+
+    function onActPlatformSelectChange() {
+      const val = document.getElementById('actPlatformSelect').value;
+      if (val) {
+        document.getElementById('actPlatformName').value = val;
+        renderActivityAnnouncement();
+      }
+    }
+
+    function addActivityPeriodRow(valueStr = '') {
+      const container = document.getElementById('actPeriodsContainer');
+      const row = document.createElement('div');
+      row.className = 'period-item';
+      row.innerHTML = `
+        <input type="text" class="form-control act-period-input" placeholder="例如：第一期：12月01日 11:00:00 ～ 12月07日23:59:59" oninput="renderActivityAnnouncement()" />
+        <button type="button" class="btn btn-danger-outline btn-sm" title="删除此期" onclick="this.parentElement.remove(); renderActivityAnnouncement();">×</button>
+      `;
+      row.querySelector('input').value = valueStr;
+      container.appendChild(row);
+      renderActivityAnnouncement();
+    }
+
+    function setActivityPeriods(periodList) {
+      const container = document.getElementById('actPeriodsContainer');
+      container.innerHTML = '';
+      if (Array.isArray(periodList) && periodList.length > 0) {
+        periodList.forEach(p => addActivityPeriodRow(p));
+      }
+    }
+
+    // 格式化日期补零，例如 12月1日 -> 12月01日
+    function padCnDateStr(str) {
+      return String(str || '').replace(/(\d{1,2})月(\d{1,2})日/g, (_, m, d) => {
+        return `${m.padStart(2, '0')}月${d.padStart(2, '0')}日`;
+      });
+    }
+
+    // 繁转简核心高频字映射（确保游戏方发来繁体中文通知时，自动转为标准简体输出）
+    const TRAD_TO_SIMP_MAP = {
+      '賭':'赌','賽':'赛','活':'活','動':'动','通':'通','知':'知','敬':'敬','愛':'爱','客':'客','戶':'户',
+      '於':'于','共':'共','計':'计','隆':'隆','舉':'举','辦':'办','獎':'奖','金':'金','大':'大','升':'升',
+      '級':'级','王':'王','者':'者','攬':'揽','百':'百','萬':'万','重':'重','點':'点','概':'概','述':'述',
+      '派':'派','發':'发','冠':'冠','軍':'军','獨':'独','得':'得','人':'人','民':'民','幣':'币','頁':'页',
+      '面':'面','時':'时','間':'间','參':'参','加':'加','資':'资','格':'格','限':'限','平':'平','台':'台',
+      '真':'真','錢':'钱','帳':'帐','號':'号','玩':'玩','家':'家','種':'种','免':'免','報':'报','名':'名',
+      '費':'费','皆':'皆','可':'可','與':'与','設':'设','備':'备','均':'均','支':'支','持':'持','本':'本',
+      '次':'次','程':'程','表':'表','內':'内','相':'相','關':'关','訊':'讯','我':'我','方':'方','保':'保',
+      '有':'有','最':'最','終':'终','解':'解','釋':'释','權':'权','協':'协','助':'助','定':'定','制':'制',
+      '素':'素','材':'材','以':'以','便':'便','運':'运','營':'营','商':'商','進':'进','行':'行','推':'推',
+      '廣':'广','此':'此','由':'由','官':'官','出':'出','送':'送','給':'给','並':'并','月':'月','結':'结',
+      '單':'单','中':'中','扣':'扣','除':'除','數':'数','據':'据','獲':'获','取':'取','請':'请','考':'考',
+      '調':'调','用':'用','文':'文','檔':'档','章':'章','節':'节','之':'之','接':'接','口':'口','編':'编',
+      '碼':'码','說':'说','明':'明','件':'件','及':'及','詳':'详','細':'细','配':'配','置':'置','還':'还',
+      '至':'至','雲':'云','端':'端','如':'如','任':'任','何':'何','問':'问','題':'题','也':'也','聯':'联',
+      '繫':'系','謝':'谢','團':'团','隊':'队','上':'上','無':'无','法':'法','異':'异','將':'将','另':'另',
+      '歡':'欢','迎':'迎','體':'体','驗':'验','暢':'畅','帳':'账','查':'查','閱':'阅','具':'具','換':'换',
+      '算':'算','積':'积','分':'分','注':'注','意':'意','項':'项','留':'留','改':'改','暫':'暂','停':'停',
+      '消':'消','利':'利','反':'反','饋':'馈','逾':'逾','期':'期','補':'补','遊':'游','戲':'戏','開':'开',
+      '始':'始','茲':'兹','產':'产','品':'品','電':'电','視':'视','網':'网','錄':'录','樂':'乐','勝':'胜',
+      '負':'负','輸':'输','贏':'赢','紅':'红','藍':'蓝','綠':'绿','黃':'黄','黑':'黑','白':'白','雙':'双',
+      '單':'单','龍':'龙','虎':'虎','鳳':'凤','凰':'凰','魚':'鱼','蝦':'虾','蟹':'蟹','雞':'鸡','豬':'猪',
+      '馬':'马','牛':'牛','羊':'羊','猴':'猴','狗':'狗','貓':'猫','鼠':'鼠','兔':'兔','蛇':'蛇','龜':'龟',
+      '寶':'宝','鑽':'钻','石':'石','玉':'玉','珠':'珠','財':'财','神':'神','福':'福','祿':'禄','壽':'寿',
+      '喜':'喜','滿':'满','堂':'堂','華':'华','麗':'丽','豪':'豪','尊':'尊','貴':'贵','皇':'皇','帝':'帝',
+      '聖':'圣','戰':'战','士':'士','俠':'侠','盜':'盗','賊':'贼','獵':'猎','捕':'捕','釣':'钓','砲':'炮',
+      '彈':'弹','爆':'爆','炸':'炸','擊':'击','殺':'杀','奪':'夺','搶':'抢','爭':'争','霸':'霸','決':'决',
+      '對':'对','挑':'挑','選':'选','輪':'轮','盤':'盘','牌':'牌','局':'局','場':'场','館':'馆','廳':'厅',
+      '區':'区','線':'线','條':'条','個':'个','們':'们','這':'这','那':'那','裡':'里','邊':'边','後':'后',
+      '前':'前','來':'来','去':'去','到':'到','從':'从','向':'向','往':'往','把':'把','被':'被','讓':'让',
+      '使':'使','教':'教','學':'学','習':'习','練':'练','試':'试','看':'看','聽':'听','講':'讲','話':'话',
+      '語':'语','言':'言','字':'字','詞':'词','句':'句','段':'段','篇':'篇','頁':'页','書':'书','畫':'画',
+      '圖':'图','片':'片','影':'影','音':'音','樂':'乐','歌':'歌','舞':'舞','戲':'戏','劇':'剧','演':'演',
+      '變':'变','化':'化','轉':'转','動':'动','靜':'静','快':'快','慢':'慢','高':'高','低':'低','長':'长',
+      '短':'短','多':'多','少':'少','好':'好','壞':'坏','美':'美','醜':'丑','新':'新','舊':'旧','真':'真',
+      '假':'假','實':'实','虛':'虚','強':'强','弱':'弱','難':'难','易':'易','輕':'轻','重':'重','冷':'冷',
+      '熱':'热','溫':'温','涼':'凉','乾':'干','濕':'湿','清':'清','濁':'浊','明':'明','暗':'暗','亮':'亮',
+      '光':'光','色':'色','彩':'彩','聲':'声','響':'响','味':'味','香':'香','臭':'臭','甜':'甜','苦':'苦',
+      '辣':'辣','酸':'酸','鹹':'咸','淡':'淡','濃':'浓','厚':'厚','薄':'薄','寬':'宽','窄':'窄','深':'深',
+      '淺':'浅','遠':'远','近':'近','內':'内','外':'外','左':'左','右':'右','東':'东','西':'西','南':'南',
+      '北':'北','中':'中','間':'间','旁':'旁','頂':'顶','底':'底','頭':'头','尾':'尾','身':'身','心':'心',
+      '手':'手','腳':'脚','眼':'眼','耳':'耳','鼻':'鼻','口':'口','舌':'舌','齒':'齿','髮':'发','膚':'肤',
+      '骨':'骨','肉':'肉','血':'血','氣':'气','力':'力','精':'精','神':'神','魂':'魂','魄':'魄','命':'命',
+      '運':'运','緣':'缘','分':'分','情':'情','愛':'爱','恨':'恨','喜':'喜','怒':'怒','哀':'哀','樂':'乐',
+      '悲':'悲','歡':'欢','離':'离','合':'合','生':'生','死':'死','病':'病','老':'老','少':'少','男':'男',
+      '女':'女','父':'父','母':'母','子':'子','孫':'孙','兄':'兄','弟':'弟','姐':'姐','妹':'妹','夫':'夫',
+      '妻':'妻','友':'友','師':'师','徒':'徒','主':'主','僕':'仆','君':'君','臣':'臣','民':'民','官':'官',
+      '兵':'兵','將':'将','帥':'帅','相':'相','侯':'侯','伯':'伯','公':'公','爵':'爵','位':'位','職':'职',
+      '業':'业','工':'工','農':'农','商':'商','學':'学','士':'士','醫':'医','藥':'药','術':'术','藝':'艺',
+      '技':'技','能':'能','才':'才','智':'智','慧':'慧','勇':'勇','謀':'谋','略':'略','計':'计','策':'策',
+      '法':'法','律':'律','規':'规','則':'则','條':'条','例':'例','章':'章','程':'程','制':'制','度':'度',
+      '標':'标','準':'准','範':'范','圍':'围','界':'界','限':'限','額':'额','度':'度','量':'量','數':'数',
+      '值':'值','價':'价','格':'格','錢':'钱','財':'财','富':'富','貴':'贵','貧':'贫','窮':'穷','困':'困',
+      '難':'难','險':'险','危':'危','安':'安','全':'全','穩':'稳','定':'定','固':'固','堅':'坚','強':'强',
+      '硬':'硬','軟':'软','柔':'柔','順':'顺','逆':'逆','正':'正','反':'反','是':'是','非':'非','對':'对',
+      '錯':'错','得':'得','失':'失','成':'成','敗':'败','功':'功','過':'过','賞':'赏','罰':'罚','獎':'奖',
+      '懲':'惩','善':'善','惡':'恶','美':'美','醜':'丑','真':'真','偽':'伪','誠':'诚','信':'信','忠':'忠',
+      '孝':'孝','仁':'仁','義':'义','禮':'礼','智':'智','廉':'廉','恥':'耻','勤':'勤','儉':'俭','懶':'懒',
+      '奢':'奢','華':'华','樸':'朴','素':'素','雅':'雅','俗':'俗','文':'文','野':'野','文明':'文明'
+    };
+
+    function toSimplifiedChinese(str) {
+      return String(str || '').replace(/[一-龥]/g, ch => TRAD_TO_SIMP_MAP[ch] || ch);
+    }
+
+    const CHINESE_NUM_MAP = ['一','二','三','四','五','六','七','八','九','十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十'];
+    function toPeriodTitle(indexZeroBased) {
+      const label = CHINESE_NUM_MAP[indexZeroBased] || String(indexZeroBased + 1);
+      return `第${label}期`;
+    }
+
+    // =========================================================================
+    // 多策略智能解析引擎（兼容不同游戏商的公告/网页/邮件/TG文案格式）
+    // =========================================================================
+
+    // 1. 平台别名与域名特征映射表（大幅提升不同游戏商的平台识别率）
+    const PLATFORM_ALIASES = {
+      'FG': ['fg', 'fungaming', 'funact', 'fg电子', 'fg棋牌', 'fg捕鱼'],
+      'Choice': ['choice', 'choice-gaming', 'choicegaming', 'choice视讯'],
+      'PP': ['pragmatic', 'pragmatic play', 'pp电子', 'pp视讯', 'pp'],
+      'PG': ['pg soft', 'pocket games', 'pg电子', 'pg'],
+      'CQ9': ['cq9', '传奇电子', 'cq9电子'],
+      'JDB': ['jdb', '夺宝电子', 'jdb电子'],
+      'EVO视讯': ['evolution', 'evo视讯', 'evo'],
+      'AWC视讯': ['awc', 'ae sexy', 'awc视讯'],
+      'BG': ['bg视讯', 'bg大游', '大游', 'bg'],
+      'KY': ['开元棋牌', '开元', 'ky棋牌', 'ky'],
+      'LEG': ['乐游棋牌', '乐游', 'leg棋牌', 'leg'],
+      'MW': ['mw电子', '大满贯', 'mw'],
+      'BSP': ['博胜', 'bsp'],
+      'SSP': ['ssp'],
+      '1Bet': ['1bet'],
+      'KX': ['kx棋牌', 'kx'],
+      'GKD': ['gkd'],
+      'YGGDZ': ['ygg', 'yggdrasil', 'yggdz'],
+      'SABA体育': ['saba', '沙巴体育', '沙巴'],
+      '熊猫体育': ['熊猫体育', 'pm体育', 'ob体育'],
+      '皇冠体育': ['皇冠体育', '皇冠'],
+      'Live体育': ['live体育']
+    };
+
+    // 2. 杂讯与内部B2B条款过滤正则
+    const ACT_UI_NOISE_RE = /^(跳至主要内容|返回活动页顶部|切换语言|简体中文|繁體中文|繁体中文|English|EVENT\s*SCHEDULE|RULES\s*&?\s*NOTICE|RANKING\s*REWARDS|IMPORTANT\s*NOTICE|Copyright|All\s*Rights\s*Reserved|积分换算表|打码王积分换算表|捕猎奖金列表|参与币种|打码王积分换算)$/i;
+    const ACT_GREETING_RE = /^(尊敬的|敬爱的|亲爱的|各位客户|各位玩家|您好|大家好|如有任何问题|若有任何问题|谢谢|感谢|客服团队|敬上|此致|Dear\s+Customers|If\s+you\s+have\s+any\s+questions|Customer\s+Service)/i;
+    const ACT_INTERNAL_B2B_RE = /运营商请于|保留修改、暂停或取消|保有最终解释权|不影响平台RTP|此活动仅限于|定制素材|月结账单|官方出资派送|transferType|DATA\s*API|Event\s*API|EventID|Single\s*Wallet|云端获取相关素材|drive\.google\.com|docs\.google\.com|可左右滚动|方向键/i;
+
+    // 筛选中文内容（若同时含中英文双语，优先保留中文部分；若纯英文则保留英文）
+    function filterPreferredLanguageLines(rawLines) {
+      const joined = rawLines.join('\n');
+      // 按分隔线切分多语种区块（如 ----- / =====）
+      const blocks = joined.split(/\n\s*[-=—–_]{5,}\s*\n/);
+      if (blocks.length > 1) {
+        const cnBlocks = blocks.filter(b => hasChinese(b));
+        if (cnBlocks.length > 0) {
+          return cnBlocks.join('\n').split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+        }
+      }
+      const anyChinese = rawLines.filter(l => hasChinese(l));
+      if (anyChinese.length >= 2) return anyChinese;
+      return rawLines;
+    }
+
+    // 统一格式化日期片段为 MM月DD日
+    function normalizeDateToken(m, d) {
+      return `${String(m).padStart(2, '0')}月${String(d).padStart(2, '0')}日`;
+    }
+
+    // 多策略解析主入口
+    function extractActivityInfoFromHtmlOrText(rawContent, sourceUrl) {
+      let doc = null;
+      let plainText = '';
+
+      if (/<[a-z][\s\S]*>/i.test(rawContent)) {
+        const parser = new DOMParser();
+        doc = parser.parseFromString(rawContent, 'text/html');
+        doc.querySelectorAll('script, style, noscript, nav, footer').forEach(el => el.remove());
+        plainText = (doc.body ? doc.body.innerText || doc.body.textContent : rawContent) || '';
+      } else {
+        plainText = rawContent;
+      }
+
+      // 0. 自动提取文本中附带的活动网址（排除网盘素材链接）
+      let detectedUrl = sourceUrl || '';
+      const allUrls = plainText.match(/https?:\/\/[^\s\u4e00-\u9fa5"'<>）)】\]]+/gi) || [];
+      const activityPageUrl = allUrls.find(u => !/drive\.google\.com|docs\.google\.com|pan\.baidu\.com/i.test(u)) || allUrls[0] || '';
+      if (activityPageUrl && !detectedUrl) {
+        detectedUrl = activityPageUrl.replace(/[.,;!?，。；！？]+$/, '');
+      }
+
+      const rawLines = plainText
+        .split(/\r?\n/)
+        .map(l => l.replace(/\s+/g, ' ').trim())
+        .filter(l => l && !ACT_UI_NOISE_RE.test(l));
+
+      // 筛选语言并统一繁转简
+      const filteredLines = filterPreferredLanguageLines(rawLines);
+      const lines = filteredLines.map(l => toSimplifiedChinese(l));
+      const fullStr = lines.join(' ');
+      const allRawStr = toSimplifiedChinese(rawLines.join(' '));
+
+      // =====================================================================
+      // 策略1：多维度评分识别举办平台
+      // =====================================================================
+      let detectedPlatform = '';
+      const pfScores = {};
+      platforms.forEach(pf => { pfScores[pf] = 0; });
+
+      // 1A. DOM img[alt] 强信号
+      if (doc) {
+        Array.from(doc.querySelectorAll('img[alt]')).forEach(img => {
+          const alt = (img.getAttribute('alt') || '').trim().toLowerCase();
+          platforms.forEach(pf => {
+            if (pf.toLowerCase() === alt) pfScores[pf] += 50;
+          });
+        });
+      }
+
+      // 1B. 网址域名与别名匹配
+      const urlLower = (detectedUrl || '').toLowerCase();
+      const textLower = allRawStr.toLowerCase();
+      Object.keys(PLATFORM_ALIASES).forEach(pf => {
+        if (!platforms.includes(pf)) return;
+        const aliases = PLATFORM_ALIASES[pf];
+        aliases.forEach(alias => {
+          const esc = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          if (urlLower && new RegExp(esc, 'i').test(urlLower)) {
+            pfScores[pf] += 40;
+          }
+          const re = /^[a-z0-9]+$/i.test(alias)
+            ? new RegExp(`(^|[^a-z0-9])${esc}([^a-z0-9]|$)`, 'i')
+            : new RegExp(esc, 'i');
+          if (re.test(textLower)) {
+            pfScores[pf] += (alias.length >= 3 ? 15 : 8);
+          }
+        });
+      });
+
+      let bestPfScore = 0;
+      Object.keys(pfScores).forEach(pf => {
+        if (pfScores[pf] > bestPfScore) {
+          bestPfScore = pfScores[pf];
+          detectedPlatform = pf;
+        }
+      });
+
+      // =====================================================================
+      // 策略2：多级优先级识别活动名称（严格排除导航/寒暄/通用词）
+      // =====================================================================
+      let detectedTitle = '';
+      const isBadTitle = (t) => {
+        if (!t || t.length < 2 || t.length > 36) return true;
+        return /^(跳至主要内容|最新消息|平台最新消息|活动通知|活动公告|活动时间|活动规则|参加游戏|参与游戏|活动页面|注意事项|温馨提醒|奖金派发|参加资格|参加设备|http)/i.test(t);
+      };
+
+      // 2A. DOM <h1>
+      if (doc) {
+        const h1 = doc.querySelector('h1');
+        if (h1) {
+          const cand = toSimplifiedChinese((h1.textContent || '').replace(/\s+/g, '').trim());
+          if (!isBadTitle(cand)) detectedTitle = cand;
+        }
+      }
+
+      // 2B. 显式标签或书名号/引号（如《奖池大升级》、举办【XXX】、活动名称：XXX）
+      if (!detectedTitle) {
+        for (const l of lines) {
+          let m = l.match(/(?:【活动名称】|活动名称[：:]|活动主题[：:])\s*[【「《"]?([^】」》"\n]+)[】」》"]?/);
+          if (m && !isBadTitle(m[1].trim())) { detectedTitle = m[1].trim(); break; }
+
+          m = l.match(/(?:举办|推出|开启|开展)\s*[【「《]([^】」》]+)[】」》]/);
+          if (m && !isBadTitle(m[1].trim())) { detectedTitle = m[1].trim(); break; }
+
+          m = l.match(/《([^》]{2,32})》/);
+          if (m && !isBadTitle(m[1].trim())) { detectedTitle = m[1].trim(); break; }
+        }
+      }
+
+      // 2C. 高信号活动关键词行（如包含 争霸赛/锦标赛/大奖赛/赌神赛/红包雨/现金掉落/抽奖/狂欢/排位赛）
+      if (!detectedTitle) {
+        const kwLine = lines.slice(0, 10).find(l =>
+          l.length >= 4 && l.length <= 32 &&
+          !ACT_GREETING_RE.test(l) &&
+          !/(?:活动时间|活动规则|活动页面|参加资格|奖金派发|http)/i.test(l) &&
+          /(争霸赛|锦标赛|大奖赛|赌神赛|红包雨|现金掉落|幸运抽奖|狂欢|排位赛|排行榜|加码|挑战赛|联赛|大赛|豪礼)/.test(l)
+        );
+        if (kwLine) {
+          const cleaned = kwLine
+            .replace(/^【(?:平台)?最新消息】\s*/, '')
+            .replace(/(?:活动)?通知$/, '')
+            .replace(/^[【「《]|[】」》]$/g, '')
+            .trim();
+          if (!isBadTitle(cleaned)) detectedTitle = cleaned;
+        }
+      }
+
+      // 2D. DOM <title> 或首部干净短句兜底
+      if (!detectedTitle && doc && doc.title) {
+        const cand = toSimplifiedChinese(doc.title.split(/[-_|｜]/)[0].trim());
+        if (!isBadTitle(cand)) detectedTitle = cand;
+      }
+      if (!detectedTitle) {
+        const fallbackLine = lines.slice(0, 6).find(l =>
+          !ACT_GREETING_RE.test(l) &&
+          !/(?:活动时间|活动规则|参加游戏|参与游戏|活动页面|温馨提醒|注意事项|奖金派发|参加资格|http)/i.test(l) &&
+          !isBadTitle(l.replace(/^[【「《]|[】」》]$/g, '').trim())
+        );
+        if (fallbackLine) detectedTitle = fallbackLine.replace(/^[【「《]|[】」》]$/g, '').trim();
+      }
+
+      // =====================================================================
+      // 策略3：全格式时间与分期识别（连续区间 / 离散多日自动分期 / 显式第X期/周/轮 / 自动汇总总时间）
+      // =====================================================================
+      let detectedTotalTime = '';
+      const detectedPeriods = [];
+
+      // 提取全局时区提示（如 北京时间 / GMT+8 / 美东时间）
+      const globalTzMatch = fullStr.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|UTC[+-]\d+)\s*[）)]/i);
+      const globalTzSuffix = globalTzMatch ? ` （${globalTzMatch[1]}）` : '';
+
+      // 3A. DOM 显式分期
+      if (doc) {
+        const articles = Array.from(doc.querySelectorAll('article, .schedule-item, .stage-item, tr, li'));
+        articles.forEach(el => {
+          const txt = toSimplifiedChinese((el.textContent || '').replace(/\s+/g, ' ').trim());
+          const pm = txt.match(/^(第[一二三四五六七八九十\d]+[期周轮场]|(?:Stage|Round|Week|Phase)\s*\d+)[：:\s]*(.+)$/i);
+          if (pm) {
+            const pLabel = pm[1];
+            const times = el.querySelectorAll('time');
+            if (times.length >= 2) {
+              const t1 = padCnDateStr(times[0].textContent.trim());
+              const t2 = padCnDateStr(times[1].textContent.trim());
+              detectedPeriods.push(`${pLabel}：${t1} ～ ${t2}`);
+            }
+          }
+        });
+      }
+
+      // 3B. 纯文本显式分期（第X期 / 第X周 / 第X轮 / Stage X / Round X）
+      if (detectedPeriods.length === 0) {
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const labelMatch = line.match(/^(第[一二三四五六七八九十\d]+[期周轮场]|(?:Stage|Round|Week|Phase)\s*\d+)/i);
+          if (labelMatch) {
+            const combined = line + ' ' + (lines[i + 1] || '') + ' ' + (lines[i + 2] || '');
+            const pm = combined.match(/^(第[一二三四五六七八九十\d]+[期周轮场]|(?:Stage|Round|Week|Phase)\s*\d+)[：:\s]*((?:20\d{2}[年\.\/\-])?\d{1,2}[月\.\/\-]\d{1,2}日?(?:\s*\([一二三四五六日天]\))?\s*(?:\d{1,2}:\d{2}(?::\d{2})?)?)\s*[\-~至到—–]\s*((?:20\d{2}[年\.\/\-])?\d{1,2}[月\.\/\-]\d{1,2}日?(?:\s*\([一二三四五六日天]\))?\s*(?:\d{1,2}:\d{2}(?::\d{2})?)?)/i);
+            if (pm) {
+              const fmtPart = (s) => padCnDateStr(
+                s.replace(/20\d{2}[年\.\/\-]/g, '')
+                 .replace(/(1[0-2]|0?[1-9])[\.\/\-](3[01]|[12]\d|0?[1-9])(?!\d)/g, (_, m, d) => normalizeDateToken(m, d))
+                 .trim()
+              );
+              const t1 = fmtPart(pm[2]);
+              const t2 = fmtPart(pm[3]);
+              const entry = `${pm[1]}：${t1} ～ ${t2}`;
+              if (!detectedPeriods.includes(entry)) detectedPeriods.push(entry);
+            }
+          }
+        }
+      }
+
+      // 3C. 识别总活动时间行（支持标签同行或换行、连续区间 vs 离散多日精准区分）
+      let totalTimeRaw = '';
+      const timeHeaderIdx = lines.findIndex(l => /^(?:【(?:活动时间|活动期间|活动日期)】|(?:活动时间|活动期间|活动日期|时间)\s*[：:])/.test(l));
+      if (timeHeaderIdx !== -1) {
+        const sameLineVal = lines[timeHeaderIdx]
+          .replace(/^(?:【(?:活动时间|活动期间|活动日期)】|(?:活动时间|活动期间|活动日期|时间)\s*[：:])\s*/, '')
+          .trim();
+        if (/\d{1,2}[月\.\/\-]\d{1,2}/.test(sameLineVal)) {
+          totalTimeRaw = sameLineVal;
+        } else if (lines[timeHeaderIdx + 1] && /\d{1,2}[月\.\/\-]\d{1,2}/.test(lines[timeHeaderIdx + 1])) {
+          totalTimeRaw = lines[timeHeaderIdx + 1].trim();
+        }
+      }
+      if (!totalTimeRaw) {
+        const fallbackTimeLine = lines.find(l => !/^第[一二三四五六七八九十\d]+[期周轮场]/.test(l) && /\d{1,2}[月\.\/\-]\d{1,2}日?\s*(?:\d{1,2}:\d{2}(?::\d{2})?\s*)?[\-~至到—–]\s*(?:20\d{2}[年\.\/\-])?\d{1,2}[月\.\/\-]\d{1,2}日?/.test(l))
+          || lines.find(l => /将于.*?\d{1,2}[月\.\/\-]\d{1,2}/.test(l));
+        if (fallbackTimeLine) {
+          totalTimeRaw = fallbackTimeLine
+            .replace(/^.*?(?:【活动时间】|【活动期间】|活动时间[：:]|活动期间[：:]|活动日期[：:]|时间[：:]|将于)\s*/, '')
+            .trim();
+        }
+      }
+
+      if (totalTimeRaw) {
+        let rawTimeVal = totalTimeRaw.replace(/共计.*$/, '').trim();
+        const tzMatch = rawTimeVal.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|UTC[+-]\d+)\s*[）)]/i);
+        const tzSuffix = tzMatch ? ` （${tzMatch[1]}）` : globalTzSuffix;
+        const dailyRangeMatch = rawTimeVal.match(/([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\s*[\-~至到—–]\s*([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?/);
+
+        // 记录所有日期的文本位置，精准判断日期之间是「顿号/逗号分隔的离散多日」还是「横杠/至连接的连续区间」
+        const dateTokenRegex = /(?:20\d{2}[年\.\/\-])?(1[0-2]|0?[1-9])[月\.\/\-](3[01]|[12]\d|0?[1-9])(?!\d)日?/g;
+        const dateMatches = [];
+        let dm;
+        while ((dm = dateTokenRegex.exec(rawTimeVal)) !== null) {
+          const md = normalizeDateToken(dm[1], dm[2]);
+          dateMatches.push({ md, start: dm.index, end: dm.index + dm[0].length });
+        }
+
+        const foundDates = [];
+        dateMatches.forEach(item => {
+          if (!foundDates.includes(item.md)) foundDates.push(item.md);
+        });
+
+        let isDiscreteMultiDay = false;
+        if (dateMatches.length >= 2) {
+          const betweenFirstTwo = rawTimeVal.slice(dateMatches[0].end, dateMatches[1].start);
+          // 只有当前两个日期之间是顿号/逗号/及/和，且不含区间连接符（- ~ 至 到）时，才判定为离散多日分期
+          if (/[、,，及和]|\band\b/i.test(betweenFirstTwo) && !/[\-~至到—–]/.test(betweenFirstTwo)) {
+            isDiscreteMultiDay = true;
+          }
+        }
+
+        if (isDiscreteMultiDay && foundDates.length >= 2) {
+          detectedTotalTime = `${foundDates.join('、')}${tzSuffix}`;
+          if (detectedPeriods.length === 0) {
+            const startClock = dailyRangeMatch ? `${dailyRangeMatch[1].padStart(2, '0')}:${dailyRangeMatch[2]}${dailyRangeMatch[3] ? ':' + dailyRangeMatch[3] : ':00'}` : '00:00:00';
+            const endClock = dailyRangeMatch ? `${dailyRangeMatch[4].padStart(2, '0')}:${dailyRangeMatch[5]}${dailyRangeMatch[6] ? ':' + dailyRangeMatch[6] : ':00'}` : '23:59:59';
+            foundDates.forEach((dStr, idx) => {
+              detectedPeriods.push(`${toPeriodTitle(idx)}：${dStr} ${startClock} ～ ${dStr} ${endClock}`);
+            });
+          }
+        } else {
+          // 连续时间区间（例如：2026年12月01日 00:00:00 - 2026年12月14日 23:59:59（北京时间），持续14日）
+          let cleaned = rawTimeVal
+            .replace(/[，,]\s*(?:持续|共|总计).*$/, '')
+            .replace(/20\d{2}[年\.\/\-]/g, '');
+          cleaned = cleaned.replace(/(1[0-2]|0?[1-9])[\.\/\-](3[01]|[12]\d|0?[1-9])(?!\d)/g, (_, m, d) => normalizeDateToken(m, d));
+          cleaned = padCnDateStr(cleaned);
+          cleaned = cleaned.replace(/\s*[\-~至到—–]\s*/g, ' ～ ');
+          cleaned = cleaned.replace(/\(([^)]+)\)/g, ' （$1）');
+          detectedTotalTime = cleaned.trim();
+        }
+      }
+
+      // 3D. 若未找到总时间行，但提取到了多期时间，自动从首期开始日与末期结束日合成总时间
+      if (!detectedTotalTime && detectedPeriods.length > 0) {
+        const firstMd = detectedPeriods[0].match(/\d{2}月\d{2}日/);
+        const lastMds = detectedPeriods[detectedPeriods.length - 1].match(/\d{2}月\d{2}日/g);
+        if (firstMd && lastMds && lastMds.length > 0) {
+          detectedTotalTime = `${firstMd[0]} ～ ${lastMds[lastMds.length - 1]}${globalTzSuffix}`;
+        }
+      }
+
+      // =====================================================================
+      // 策略4：多策略识别参加游戏（支持同行、换行多行、多种标签写法及既有游戏库兜底匹配）
+      // =====================================================================
+      let detectedGames = '';
+      const gameHeaderRe = /^(?:【(?:参加活动游戏|参与活动游戏|参加游戏|参与游戏|适用游戏|活动游戏|指定游戏|限定游戏|活动适用游戏|支持游戏)】|(?:参加活动游戏|参与活动游戏|参加游戏|参与游戏|适用游戏|活动游戏|指定游戏|限定游戏|活动适用游戏|支持游戏)\s*[：:])\s*(.*)$/;
+      const sectionBreakRe = /^(?:【(?:活动时间|活动期间|活动日期|活动规则|规则说明|活动内容|活动奖励|奖金派发|参加资格|参与条件|参加设备|注意事项|温馨提醒|温馨提示|活动页面|活动网址)】|(?:活动时间|活动期间|活动日期|活动规则|规则说明|活动内容|活动玩法|活动奖励|奖金派发|参加资格|参与条件|参加设备|注意事项|温馨提醒|温馨提示|活动页面|活动网址)\s*[：:]|第[一二三四五六七八九十\d]+[期周轮场]|https?:\/\/|\d+[.、\)）]|[①②③④⑤⑥⑦⑧⑨⑩★◆•])/i;
+
+      const gameHeaderIdx = lines.findIndex(l => gameHeaderRe.test(l));
+      if (gameHeaderIdx !== -1) {
+        const collectedParts = [];
+        const inlineMatch = lines[gameHeaderIdx].match(gameHeaderRe);
+        if (inlineMatch && inlineMatch[1] && inlineMatch[1].trim()) {
+          collectedParts.push(inlineMatch[1].trim());
+        }
+        // 继续向下读取紧跟在标题行后的游戏名称行（最多读6行，遇到新区块标题或“共X款游戏”说明行自动停止）
+        for (let j = gameHeaderIdx + 1; j < Math.min(lines.length, gameHeaderIdx + 7); j++) {
+          const nextLine = lines[j];
+          if (sectionBreakRe.test(nextLine)) break;
+          if (/^(?:共\s*\d+\s*款|共计\s*\d+|总计\s*\d+|[（(]\s*玩家)/.test(nextLine)) break;
+          if (ACT_GREETING_RE.test(nextLine) || ACT_INTERNAL_B2B_RE.test(nextLine)) break;
+          // 如果同行已经拿到了明确结果，且下一行看起来像完整句子（超过40字且没有顿号/逗号分隔游戏名），则停止
+          if (collectedParts.length > 0 && nextLine.length > 40 && !/[、,，]/.test(nextLine)) break;
+          collectedParts.push(nextLine);
+        }
+
+        if (collectedParts.length > 0) {
+          let merged = collectedParts
+            .join('、')
+            .replace(/[（(]\s*玩家[^）)]*[）)]/g, '')
+            .replace(/[、,，]\s*共\s*\d+\s*款游戏.*$/, '')
+            .replace(/[、,，]{2,}/g, '、')
+            .replace(/^[、,，\s]+|[、,，。\s]+$/g, '')
+            .trim();
+          if (merged) detectedGames = merged;
+        }
+      }
+
+      // 若未找到显式「参加游戏」标签，则根据全文是否明确说明“全部游戏”或包含该平台特定游戏来判定
+      if (!detectedGames) {
+        if (/全部游戏|所有游戏|全馆游戏|全系列/.test(fullStr)) {
+          detectedGames = '全部游戏';
+        } else if (detectedPlatform) {
+          const pfGames = allGames.filter(g => g.platform === detectedPlatform);
+          const hitGames = pfGames
+            .filter(g => g.name.length >= 2 && g.name !== detectedPlatform && fullStr.includes(g.name))
+            .map(g => g.name);
+          if (hitGames.length > 0 && hitGames.length <= 30) {
+            detectedGames = Array.from(new Set(hitGames)).join('、');
+          } else {
+            detectedGames = '全部游戏';
+          }
+        } else {
+          detectedGames = '全部游戏';
+        }
+      }
+
+      // =====================================================================
+      // 策略5：多策略筛选活动规则与核心要点（兼容编号/符号/标签，自动剔除杂讯与B2B参数）
+      // =====================================================================
+      const ruleItems = [];
+      const addRuleUnique = (txt) => {
+        const clean = String(txt || '').replace(/\s+/g, ' ').trim();
+        if (!clean || clean.length < 5) return;
+        if (ACT_INTERNAL_B2B_RE.test(clean) || ACT_GREETING_RE.test(clean) || ACT_UI_NOISE_RE.test(clean)) return;
+        if (/^[\d\s.,%]+$/.test(clean)) return;
+        if (!ruleItems.includes(clean)) ruleItems.push(clean);
+      };
+
+      // 5A. DOM 规则列表提取
+      if (doc) {
+        const headings = Array.from(doc.querySelectorAll('h2, h3, .section-title'));
+        const ruleHeading = headings.find(h => /活动规则|规则说明|活动玩法|RULES/i.test(h.textContent || ''));
+        if (ruleHeading) {
+          const parentSec = ruleHeading.closest('section') || ruleHeading.parentElement;
+          const lis = parentSec ? Array.from(parentSec.querySelectorAll('ol > li, ul > li')) : [];
+          lis.forEach(li => {
+            const clone = li.cloneNode(true);
+            const firstSpan = clone.querySelector('span:first-child');
+            if (firstSpan && /^\d+[.、]?$/.test(firstSpan.textContent.trim())) firstSpan.remove();
+            addRuleUnique(toSimplifiedChinese(clone.textContent));
+          });
+        }
+      }
+
+      // 5B. 纯文本多模式规则提取（编号行 + 项目符号行 + 核心【标签】要点行 + 规则/方式区块正文）
+      if (ruleItems.length === 0) {
+        let inRulesSection = false;
+        const ruleHeaderRe = /^(?:【(?:活动规则|规则说明|活动内容|活动说明|活动玩法|玩法说明|活动方式|参与方式|活动详情|活动介绍|活动机制|奖励说明|奖项说明|奖金说明|派奖说明)】|(?:活动规则|规则说明|活动内容|活动说明|活动玩法|玩法说明|活动方式|参与方式|活动详情|活动介绍|活动机制|奖励说明|奖项说明|奖金说明|派奖说明)\s*[：:])\s*(.*)$/;
+        const nonRuleSectionRe = /^(?:【(?:活动时间|活动期间|活动日期|活动页面|活动网址|注意事项|温馨提醒|温馨提示)】|(?:活动时间|活动期间|活动日期|时间|活动页面|活动网址|注意事项|温馨提醒|温馨提示)\s*[：:]|参与币种|积分换算|打码王积分|排行榜奖励|奖金列表|IMPORTANT|Copyright|https?:\/\/)/i;
+
+        for (const l of lines) {
+          const rhMatch = l.match(ruleHeaderRe);
+          if (rhMatch) {
+            inRulesSection = true;
+            if (rhMatch[1] && rhMatch[1].trim()) {
+              addRuleUnique(rhMatch[1].trim());
+            }
+            continue;
+          }
+
+          // 遇到「参加活动游戏：」或「活动时间：」等其他非规则区块时，结束当前规则区块读取，避免把游戏名或时间混进规则里
+          if (gameHeaderRe.test(l) || nonRuleSectionRe.test(l)) {
+            inRulesSection = false;
+            continue;
+          }
+
+          if (ACT_INTERNAL_B2B_RE.test(l) || ACT_GREETING_RE.test(l)) continue;
+
+          // 模式1：编号或项目符号开头（1. / 1、 / (1) / ① / • / - / ◎ / ▪ / ★ / ◆ / ※）
+          if (/^(?:\d+[.、\)）]|[（(]\d+[）)]|[①②③④⑤⑥⑦⑧⑨⑩]|[•\-◎▪★◆※])\s*/.test(l)) {
+            const cleaned = l.replace(/^(?:\d+[.、\)）]|[（(]\d+[）)]|[①②③④⑤⑥⑦⑧⑨⑩]|[•\-◎▪★◆※])\s*/, '').trim();
+            addRuleUnique(cleaned);
+            continue;
+          }
+
+          // 模式2：核心要点【标签】行（支持【标签】内容 或 标签：内容）
+          const tagMatch = l.match(/^(?:【(奖金派发|派奖方式|派奖时间|参加资格|参与资格|参与条件|参加设备|支持设备|活动奖励|奖池说明|奖金池|排名规则|最低投注)】|(奖金派发|派奖方式|派奖时间|参加资格|参与资格|参与条件|参加设备|支持设备|活动奖励|奖池说明|奖金池|排名规则|最低投注)\s*[：:])\s*(.+)$/);
+          if (tagMatch) {
+            const label = tagMatch[1] || tagMatch[2];
+            const val = (tagMatch[3] || '').trim();
+            if (val) addRuleUnique(`${label}：${val}`);
+            continue;
+          }
+
+          // 模式3：显式规则/活动方式区块内的正文行
+          if (inRulesSection) {
+            addRuleUnique(l);
+          }
+        }
+      }
+
+      const formattedRules = ruleItems.map((r, idx) => `${idx + 1}. ${r}`).join('\n');
+
+      return {
+        url: detectedUrl,
+        platform: detectedPlatform,
+        title: detectedTitle,
+        totalTime: detectedTotalTime,
+        periods: detectedPeriods,
+        games: detectedGames,
+        rules: formattedRules
+      };
+    }
+
+    function applyExtractedActivityData(info, sourceLabel) {
+      if (info.url) {
+        document.getElementById('actUrlInput').value = info.url;
+      }
+      if (info.platform) {
+        document.getElementById('actPlatformName').value = info.platform;
+        const sel = document.getElementById('actPlatformSelect');
+        if (Array.from(sel.options).some(o => o.value === info.platform)) {
+          sel.value = info.platform;
+        }
+      }
+      if (info.title) document.getElementById('actTitle').value = info.title;
+      if (info.totalTime) document.getElementById('actTotalTime').value = info.totalTime;
+      if (info.games) document.getElementById('actGames').value = info.games;
+      setActivityPeriods(info.periods);
+      if (info.rules) document.getElementById('actRules').value = info.rules;
+
+      const badge = document.getElementById('actDetectStatusBadge');
+      badge.textContent = sourceLabel;
+      badge.className = 'badge badge-routine';
+      renderActivityAnnouncement();
+    }
+
+    function clearPastedActivityText() {
+      document.getElementById('actRawPasteText').value = '';
+      showToast('已清空粘贴原文框');
+    }
+
+    // 方式一备用折叠框：粘贴网页源码/原文自动解析
+    function parseWebpagePastedText() {
+      const raw = document.getElementById('actWebpagePasteText').value.trim();
+      const urlVal = document.getElementById('actUrlInput').value.trim();
+      if (!raw) {
+        showToast('⚠️ 请先粘贴活动网页原文内容');
+        return;
+      }
+      const info = extractActivityInfoFromHtmlOrText(raw, urlVal);
+      applyExtractedActivityData(info, '✅ 已从网页粘贴原文提取');
+      showToast('✅ 已从网页粘贴原文提取活动要素！');
+    }
+
+
+
+    // 通过多路公共 CORS 代理抓取目标活动网址 HTML 内容
+    async function detectActivityFromUrl() {
+      const urlInput = document.getElementById('actUrlInput').value.trim();
+      if (!urlInput) {
+        showToast('⚠️ 请先输入活动页面网址');
+        return;
+      }
+
+      const btn = document.getElementById('btnFetchActivityUrl');
+      const badge = document.getElementById('actDetectStatusBadge');
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在侦测抓取...';
+      badge.textContent = '正在读取网页内容...';
+      badge.className = 'badge badge-temp';
+
+      // 确保拉取简体中文页面（若网址带 /en/ 或 /zh-tw/ 可按需保留原链接）
+      const proxies = [
+        async (u) => {
+          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`);
+          if (!res.ok) throw new Error('allorigins failed');
+          const data = await res.json();
+          if (!data || !data.contents) throw new Error('empty contents');
+          return data.contents;
+        },
+        async (u) => {
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`);
+          if (!res.ok) throw new Error('corsproxy failed');
+          return await res.text();
+        },
+        async (u) => {
+          const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`);
+          if (!res.ok) throw new Error('codetabs failed');
+          return await res.text();
+        }
+      ];
+
+      let fetchedHtml = '';
+      for (const proxyFn of proxies) {
+        try {
+          const content = await proxyFn(urlInput);
+          if (content && content.length > 100) {
+            fetchedHtml = content;
+            break;
+          }
+        } catch (err) {
+          console.warn('Proxy attempt failed:', err);
+        }
+      }
+
+      btn.disabled = false;
+      btn.textContent = '🔍 侦测网址内容';
+
+      if (!fetchedHtml) {
+        badge.textContent = '跨域受限，请直接用下方粘贴框';
+        badge.className = 'badge badge-temp';
+        document.getElementById('actRawPasteText').focus();
+        renderActivityAnnouncement();
+        showToast('⚠️ 该网址限制跨域抓取，请直接复制网页文字粘贴到下方绿色输入框');
+        return;
+      }
+
+      const info = extractActivityInfoFromHtmlOrText(fetchedHtml, urlInput);
+      applyExtractedActivityData(info, '✅ 网址侦测成功');
+      showToast('✅ 已成功侦测网址内容并生成活动公告！');
+    }
+
+    // 从用户复制贴上的游戏方内容中自动筛选要素并生成公告
+    function parsePastedActivityText() {
+      const raw = document.getElementById('actRawPasteText').value.trim();
+      const urlVal = document.getElementById('actUrlInput').value.trim();
+      if (!raw) {
+        showToast('⚠️ 请先复制贴上游戏方提供的活动内容');
+        return;
+      }
+      const info = extractActivityInfoFromHtmlOrText(raw, urlVal);
+      const summaryParts = [];
+      if (info.platform) summaryParts.push(info.platform);
+      if (info.title) summaryParts.push(`「${info.title}」`);
+      if (info.periods.length > 0) summaryParts.push(`${info.periods.length}期时间`);
+      applyExtractedActivityData(info, `✅ 已自动筛选提取${summaryParts.length ? '：' + summaryParts.join(' ') : ''}`);
+      showToast('✅ 已自动筛选内容并生成活动公告！');
+    }
+
+    // 加载 FG 活动示例（与您提供的 https://funact.bdnldfu.com/2612BetKingFinals/ 完全一致）
+    function loadSampleActivityDemo() {
+      document.getElementById('actUrlInput').value = 'https://funact.bdnldfu.com/2612BetKingFinals/';
+      document.getElementById('actPlatformSelect').value = 'FG';
+      document.getElementById('actPlatformName').value = 'FG';
+      document.getElementById('actTitle').value = '年终打码争霸赛';
+      document.getElementById('actTotalTime').value = '12月01日 ～ 12月28日 （北京时间）';
+      document.getElementById('actGames').value = '全部游戏';
+      setActivityPeriods([
+        '第一期：12月01日 11:00:00 ～ 12月07日23:59:59',
+        '第二期：12月08日 11:00:00 ～ 12月14日23:59:59',
+        '第三期：12月15日 11:00:00 ～ 12月21日23:59:59',
+        '第四期：12月22日 11:00:00 ～ 12月28日23:59:59'
+      ]);
+      document.getElementById('actRules').value = [
+        '1. FG 玩家在“FG”游戏进行有效打码可参与打码活动。',
+        '2. 排行榜奖励：活动期间对玩家捕猎，棋牌，电子游戏有效打码分类型统计，活动截止时排名上榜的玩家可获得相对应的排名奖励，奖励将于活动结束后的24小时内发放到获奖玩家账户。',
+        '3. 在打码活动中玩家可通过游戏内的活动页查阅当前排名，以及具体的活动规则和奖励。'
+      ].join('\n');
+      document.getElementById('actIncludeRtpNote').checked = true;
+
+      const badge = document.getElementById('actDetectStatusBadge');
+      badge.textContent = '已载入 FG 示例数据';
+      badge.className = 'badge badge-routine';
+      renderActivityAnnouncement();
+      showToast('已载入 FG 示例数据，您也可直接点击「侦测网址内容」测试线上抓取');
+    }
+
+    function resetActivityForm() {
+      document.getElementById('actUrlInput').value = '';
+      document.getElementById('actRawPasteText').value = '';
+      document.getElementById('actPlatformSelect').value = '';
+      document.getElementById('actPlatformName').value = '';
+      document.getElementById('actTitle').value = '';
+      document.getElementById('actTotalTime').value = '';
+      document.getElementById('actGames').value = '全部游戏';
+      document.getElementById('actRules').value = '';
+      setActivityPeriods([]);
+      const badge = document.getElementById('actDetectStatusBadge');
+      badge.textContent = '等待输入网址';
+      badge.className = 'badge';
+      renderActivityAnnouncement();
+      showToast('已重置活动公告表单');
+    }
+
+    // 严格按照标准模板实时渲染活动公告文本
+    function renderActivityAnnouncement() {
+      const pfRaw = (document.getElementById('actPlatformName').value || '').trim();
+      const pfLabel = pfRaw ? (pfRaw.endsWith('平台') ? pfRaw : `${pfRaw}平台`) : 'XX平台';
+      const title = (document.getElementById('actTitle').value || '').trim() || '活动名称';
+      const totalTime = (document.getElementById('actTotalTime').value || '').trim() || '待定';
+      const games = (document.getElementById('actGames').value || '').trim() || '全部游戏';
+      const rules = (document.getElementById('actRules').value || '').trim();
+      const url = (document.getElementById('actUrlInput').value || '').trim();
+      const includeRtp = document.getElementById('actIncludeRtpNote').checked;
+
+      const periodInputs = Array.from(document.querySelectorAll('.act-period-input'))
+        .map(inp => inp.value.trim())
+        .filter(Boolean);
+
+      const timeBlockLines = [`【活动时间】${totalTime}`];
+      if (periodInputs.length > 0) {
+        periodInputs.forEach(p => timeBlockLines.push(p));
+      }
+
+      const rulesBlock = rules ? rules : '1. 详情请见活动页面说明。';
+      const urlLine = url ? `\n【活动页面】${url}\n` : '\n';
+      const rtpLine = includeRtp ? `\n-相关费用将由${pfLabel}负担，不影响平台RTP。` : '';
+
+      const output = `尊敬的客户您好，兹通知您【${pfLabel}】活动通知
+ 
+【${pfLabel}】即将举办【${title}】活动通知
+ 
+${timeBlockLines.join('\n')}
+
+【参加游戏】${games}
+
+【活动规则】
+${rulesBlock}
+${urlLine}
+温馨提醒: 
+-此活动仅限于【${pfLabel}】内参与。${rtpLine}`;
+
+      document.getElementById('activityPreview').value = output;
+    }
+
+    function copyActivityAnnouncement() {
+      const text = document.getElementById('activityPreview').value;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('✅ 活动公告已复制到剪贴板！');
+      }).catch(() => {
+        const textarea = document.getElementById('activityPreview');
+        textarea.select();
+        document.execCommand('copy');
+        showToast('✅ 活动公告已复制到剪贴板！');
+      });
+    }
+
+    function downloadActivityTxt() {
+      const text = document.getElementById('activityPreview').value;
+      const pf = (document.getElementById('actPlatformName').value || '平台').trim();
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${pf}_活动公告_${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // 初始化启动
+    initDefaultTimes();
+    initData(DEFAULT_RAW_DATA);
+    initActivityTab();
+  </script>
+</body>
+</html>
