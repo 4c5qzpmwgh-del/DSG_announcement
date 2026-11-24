@@ -695,10 +695,13 @@
     <header>
       <div class="header-title">
         <h1>🔧 游戏维护公告模板系统</h1>
-        <p>已内置 22 个平台（共 2,368 款游戏）完整数据，支持多条件筛选及导入维护 Excel 自动侦测游戏与时间
+        <p>已内置 22 个平台（共 2,368 款游戏）完整数据，支持多条件筛选及导入维护 Excel 自动侦测游戏与时间</p>
 <br><span style="color: red;"><strong >新游戏接入完成，请立即通知Alvin<strong ></span></p>
       </div>
       <div class="header-actions">
+        <button type="button" class="btn btn-outline" onclick="downloadMaintenanceTemplateXlsx()">
+          📥 下载维护文档模板
+        </button>
         <input type="file" id="excelUploader" accept=".xlsx,.xls,.csv" style="display:none" />
         <button class="btn btn-primary" onclick="document.getElementById('excelUploader').click()">
           📂 导入维护 Excel（自动侦测游戏与时间）
@@ -810,15 +813,14 @@
           </div>
         </div>
 
-        <!-- 时间与自动判定规则区 -->
+        <!-- 时间与自动判定规则区（发布时间预设为【当前】，自动转换至 GMT+8） -->
         <div class="time-rule-box">
           <div class="form-row" style="margin-bottom: 8px;">
             <div class="form-group" style="margin-bottom: 0;">
-              <label>
-                <span>发布时间（用于计算距开始时间差）</span>
-                <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="setPublishNow()">设为当前</button>
-              </label>
-              <input type="datetime-local" id="publishTime" class="form-control" onchange="renderAnnouncement()" />
+              <label><span>发布时间</span></label>
+              <div style="padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:#f1f5f9;font-size:13px;color:var(--text-main);font-weight:500;">
+                当前发布（自动按 GMT+8 计算）
+              </div>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
               <label>
@@ -835,14 +837,14 @@
           <div class="form-row" style="margin-bottom: 0;">
             <div class="form-group" style="margin-bottom: 0;">
               <label>
-                <span>开始时间（未侦测到/清空则为「即刻」）</span>
+                <span>开始时间（GMT+8，空则为「即刻」）</span>
                 <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="clearStartTime()">设为即刻</button>
               </label>
               <input type="datetime-local" id="startTime" class="form-control" onchange="renderAnnouncement()" />
             </div>
             <div class="form-group" style="margin-bottom: 0;">
               <label>
-                <span>结束/完成时间（未侦测到/清空则为「待定」）</span>
+                <span>结束/完成时间（GMT+8，空则为「待定」）</span>
                 <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="clearEndTime()">设为待定</button>
               </label>
               <input type="datetime-local" id="endTime" class="form-control" onchange="renderAnnouncement()" />
@@ -851,7 +853,7 @@
 
           <div class="rule-status-bar">
             <span id="timeDiffText" style="color:var(--text-sub);">时间差计算中...</span>
-            <span style="color:var(--text-muted);">未侦测时间：开始=即刻，结束=待定</span>
+            <span style="color:var(--text-muted);">所有时间自动转换至 GMT+8</span>
           </div>
         </div>
 
@@ -1102,34 +1104,59 @@
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
-    // 格式化日期时间为公告格式：xx月xx日 xx:xx (GMT+8)，空值按 fallback 返回（开始时间=即刻，结束时间=待定）
+    // 获取当前时刻对应的 GMT+8 时间对象（无论本地/浏览器处于哪个时区，均换算为 GMT+8）
+    function getNowInUtc8() {
+      const now = new Date();
+      const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+      return new Date(utcMs + 8 * 3600 * 1000);
+    }
+
+    // 将日期时间字符串按 GMT+8 格式化为：xx月xx日 xx:xx (GMT+8)，空值按 fallback 返回
     function formatAnnouncementTime(dtLocalStr, fallbackText) {
       if (!dtLocalStr) return fallbackText;
+      // dtLocalStr 形如 "2026-11-24T16:30"
+      const m = String(dtLocalStr).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (m) {
+        return `${m[2]}月${m[3]}日 ${m[4]}:${m[5]} (GMT+8)`;
+      }
       const d = new Date(dtLocalStr);
       if (isNaN(d.getTime())) return fallbackText;
+      const utc8Date = new Date(d.getTime() + (d.getTimezoneOffset() + 8 * 60) * 60000);
       const pad = n => String(n).padStart(2, '0');
-      const month = pad(d.getMonth() + 1);
-      const day = pad(d.getDate());
-      const hour = pad(d.getHours());
-      const minute = pad(d.getMinutes());
-      return `${month}月${day}日 ${hour}:${minute} (GMT+8)`;
+      return `${pad(utc8Date.getMonth() + 1)}月${pad(utc8Date.getDate())}日 ${pad(utc8Date.getHours())}:${pad(utc8Date.getMinutes())} (GMT+8)`;
     }
 
-    // 初始化默认时间
+    // 将任意带时区偏移（如 UTC+0 / UTC-5 / GMT-4 / 北京时间 / EST）的时间字符串换算为 GMT+8
+    function convertTextTimeToUtc8(str) {
+      if (!str) return '';
+      let out = String(str);
+      // 匹配类似 "10:00 (UTC+0)" 或 "12:00 (GMT-5)" 或 "14:30（UTC+9）"
+      out = out.replace(/([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\s*[（(]\s*(?:UTC|GMT)([+-]\d{1,2})\s*[）)]/gi,
+        (_, hh, mm, ss, offsetStr) => {
+          const srcOffset = parseInt(offsetStr, 10);
+          const diffHours = 8 - srcOffset;
+          const totalMins = (parseInt(hh, 10) + diffHours) * 60 + parseInt(mm, 10);
+          const wrappedMins = ((totalMins % 1440) + 1440) % 1440;
+          const nh = String(Math.floor(wrappedMins / 60)).padStart(2, '0');
+          const nm = String(wrappedMins % 60).padStart(2, '0');
+          const secPart = ss ? `:${ss}` : '';
+          return `${nh}:${nm}${secPart} （GMT+8）`;
+        }
+      );
+      // 统一将 GMT+8 / 北京时间 / UTC+8 规范标注为 GMT+8
+      out = out.replace(/[（(]\s*(?:GMT\+8|北京时间|GMT\+8)\s*[）)]/gi, ' （GMT+8）');
+      return out;
+    }
+
+    // 初始化默认时间（按 GMT+8 时区）
     function initDefaultTimes() {
-      const now = new Date();
-      const start = new Date(now.getTime() + 2.5 * 3600 * 1000);
-      start.setMinutes(0, 0, 0);
-      const end = new Date(start.getTime() + 2 * 3600 * 1000);
+      const nowUtc8 = getNowInUtc8();
+      const startUtc8 = new Date(nowUtc8.getTime() + 2.5 * 3600 * 1000);
+      startUtc8.setMinutes(0, 0, 0);
+      const endUtc8 = new Date(startUtc8.getTime() + 2 * 3600 * 1000);
 
-      document.getElementById('publishTime').value = toDateTimeLocalStr(now);
-      document.getElementById('startTime').value = toDateTimeLocalStr(start);
-      document.getElementById('endTime').value = toDateTimeLocalStr(end);
-    }
-
-    function setPublishNow() {
-      document.getElementById('publishTime').value = toDateTimeLocalStr(new Date());
-      renderAnnouncement();
+      document.getElementById('startTime').value = toDateTimeLocalStr(startUtc8);
+      document.getElementById('endTime').value = toDateTimeLocalStr(endUtc8);
     }
 
     function clearStartTime() {
@@ -1434,10 +1461,9 @@
       showToast('已重置所有筛选条件');
     }
 
-    // 核心：根据发布时间与开始维护时间差自动判定「例行维护通知」或「临时维护通知」
+    // 核心：按预设【当前】发布时间（GMT+8）与开始维护时间差自动判定「例行维护通知」或「临时维护通知」
     function determineMaintenanceType() {
       const override = document.getElementById('noticeTypeOverride').value;
-      const pubStr = document.getElementById('publishTime').value;
       const startStr = document.getElementById('startTime').value;
       const diffEl = document.getElementById('timeDiffText');
       const badgeEl = document.getElementById('noticeTypeBadge');
@@ -1449,9 +1475,14 @@
         isRoutine = false;
         reasonText = '未侦测到/未指定开始时间（开始=即刻）→ 判定为【临时维护通知】';
       } else {
-        const pubDate = pubStr ? new Date(pubStr) : new Date();
-        const startDate = new Date(startStr);
-        const diffMs = startDate.getTime() - pubDate.getTime();
+        // 发布时间预设为【当前】（GMT+8），与开始时间（GMT+8）直接计算差值
+        const nowUtc8 = getNowInUtc8();
+        const sm = String(startStr).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        const startUtc8 = sm
+          ? new Date(Date.UTC(parseInt(sm[1], 10), parseInt(sm[2], 10) - 1, parseInt(sm[3], 10), parseInt(sm[4], 10) - 8, parseInt(sm[5], 10)))
+          : new Date(startStr);
+        const nowUtcMs = Date.UTC(nowUtc8.getFullYear(), nowUtc8.getMonth(), nowUtc8.getDate(), nowUtc8.getHours() - 8, nowUtc8.getMinutes());
+        const diffMs = startUtc8.getTime() - nowUtcMs;
         const diffHours = diffMs / (1000 * 3600);
 
         if (diffHours >= 2) {
@@ -2307,7 +2338,7 @@
       const detectedPeriods = [];
 
       // 提取全局时区提示（如 北京时间 / GMT+8 / 美东时间）
-      const globalTzMatch = fullStr.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|UTC[+-]\d+)\s*[）)]/i);
+      const globalTzMatch = fullStr.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|GMT[+-]\d+)\s*[）)]/i);
       const globalTzSuffix = globalTzMatch ? ` （${globalTzMatch[1]}）` : '';
 
       // 3A. DOM 显式分期
@@ -2385,7 +2416,7 @@
 
       if (totalTimeRaw) {
         let rawTimeVal = totalTimeRaw.replace(/共计.*$/, '').trim();
-        const tzMatch = rawTimeVal.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|UTC[+-]\d+)\s*[）)]/i);
+        const tzMatch = rawTimeVal.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|GMT[+-]\d+)\s*[）)]/i);
         const tzSuffix = tzMatch ? ` （${tzMatch[1]}）` : globalTzSuffix;
         const dailyRangeMatch = rawTimeVal.match(/([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\s*[\-~至到—–]\s*([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?/);
 
@@ -2422,7 +2453,7 @@
             });
           }
         } else {
-          // 连续时间区间或单截止时间（例如：2026年12月01日 00:00:00 - 2026年12月14日 23:59:59（北京时间） 或 2026/10/7 23:59:59（UTC+8））
+          // 连续时间区间或单截止时间（例如：2026年12月01日 00:00:00 - 2026年12月14日 23:59:59（北京时间） 或 2026/10/7 23:59:59（GMT+8））
           let cleaned = rawTimeVal
             .replace(/[，,]\s*(?:持续|共|总计).*$/, '')
             .replace(/20\d{2}[年\.\/\-]/g, '');
@@ -2773,9 +2804,9 @@
         .map(inp => inp.value.trim())
         .filter(Boolean);
 
-      const timeBlockLines = [`【活动时间】${totalTime}`];
+      const timeBlockLines = [`【活动时间】${convertTextTimeToUtc8(totalTime)}`];
       if (periodInputs.length > 0) {
-        periodInputs.forEach(p => timeBlockLines.push(p));
+        periodInputs.forEach(p => timeBlockLines.push(convertTextTimeToUtc8(p)));
       }
 
       const rulesBlock = rules ? rules : '1. 详情请见活动页面说明。';
@@ -2822,6 +2853,31 @@ ${urlLine}
       a.download = `${pf}_活动公告_${new Date().toISOString().slice(0, 10)}.txt`;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+
+    // 下载维护公告文档模板（公告文档模板.xlsx）
+    const MAINTENANCE_TEMPLATE_XLSX_B64 = "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";
+    function downloadMaintenanceTemplateXlsx() {
+      try {
+        const byteChars = atob(MAINTENANCE_TEMPLATE_XLSX_B64);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) {
+          byteNumbers[i] = byteChars.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '公告文档模板.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✅ 已下载《公告文档模板.xlsx》，填写后将档名改为【平台名称】即可上传');
+      } catch (err) {
+        console.error(err);
+        showToast('模板下载失败，请稍后重试');
+      }
     }
 
     // 初始化启动
