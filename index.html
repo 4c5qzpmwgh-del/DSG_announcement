@@ -694,9 +694,9 @@
     <!-- 顶部栏 -->
     <header>
       <div class="header-title">
-        <h1>🔧 游戏维护公告模板系统</h1>
+        <h1>🔧 游戏维护公告模板系统 v2.0</h1>
         <p>已内置 22 个平台（共 2,368 款游戏）完整数据，支持多条件筛选及导入维护 Excel 自动侦测游戏与时间</p>
-<br><span style="color: red;"><strong >新游戏接入完成，请立即通知Alvin<strong ></span></p>
+	<br><span style="color: red;"><strong >新游戏接入完成，请立即通知Alvin<strong ></span></p>
       </div>
       <div class="header-actions">
         <button type="button" class="btn btn-outline" onclick="downloadMaintenanceTemplateXlsx()">
@@ -705,9 +705,6 @@
         <input type="file" id="excelUploader" accept=".xlsx,.xls,.csv" style="display:none" />
         <button class="btn btn-primary" onclick="document.getElementById('excelUploader').click()">
           📂 导入维护 Excel（自动侦测游戏与时间）
-        </button>
-        <button class="btn btn-danger-outline" onclick="resetAllFilters()">
-          🔄 重置筛选条件
         </button>
       </div>
     </header>
@@ -732,7 +729,12 @@
             <span>🎮 平台与游戏筛选</span>
             <span class="badge" id="totalGamesBadge">共 0 款</span>
           </div>
-          <span style="font-size:12px;color:var(--text-muted)">已勾选 <strong id="selectedCountHeader" style="color:var(--primary)">0</strong> 款游戏</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:var(--text-muted)">已勾选 <strong id="selectedCountHeader" style="color:var(--primary)">0</strong> 款游戏</span>
+            <button type="button" class="btn btn-danger-outline btn-sm" onclick="resetAllFilters()">
+              🔄 重置筛选条件
+            </button>
+          </div>
         </div>
 
         <!-- 条件1：选择平台（对应 Excel 分页名称） -->
@@ -767,10 +769,7 @@
             当前筛选命中：<strong id="filteredCount">0</strong> 款游戏
             <span id="activeFilterSummary" style="margin-left:6px;color:var(--primary);font-size:12px;"></span>
           </div>
-          <div class="toolbar-btns">
-            <button class="btn btn-primary btn-sm" onclick="selectAllFiltered()">✅ 全选当前结果</button>
-            <button class="btn btn-outline btn-sm" onclick="deselectAllFiltered()">⬜ 取消当前结果</button>
-          </div>
+          <div class="toolbar-btns"></div>
         </div>
 
         <!-- 游戏列表容器 -->
@@ -797,12 +796,9 @@
           </button>
         </div>
 
-        <!-- 平台名称选择（用于全平台维护） -->
-        <div class="form-row" id="platformSelectRow" style="display:none;">
-          <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
-            <label>选择全平台维护的目标平台（支持多选，或自动同步左侧已选平台）</label>
-            <div class="pill-list" id="fullPlatformSelector"></div>
-          </div>
+        <!-- 全平台维护模式：强制从左侧平台选择，此处不显示重复平台按键 -->
+        <div id="platformSelectRow" style="display:none;">
+          <div id="fullPlatformSelector" style="display:none;"></div>
         </div>
 
         <!-- 已选游戏池（仅在指定游戏模式下显示） -->
@@ -813,13 +809,13 @@
           </div>
         </div>
 
-        <!-- 时间与自动判定规则区（发布时间预设为【当前】，自动转换至 GMT+8） -->
+        <!-- 时间与自动判定规则区（发布时间预设为【当前】，自动转换至 UTC+8） -->
         <div class="time-rule-box">
           <div class="form-row" style="margin-bottom: 8px;">
             <div class="form-group" style="margin-bottom: 0;">
               <label><span>发布时间</span></label>
               <div style="padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:#f1f5f9;font-size:13px;color:var(--text-main);font-weight:500;">
-                当前发布（自动按 GMT+8 计算）
+                当前发布（自动按 UTC+8 计算）
               </div>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
@@ -837,14 +833,14 @@
           <div class="form-row" style="margin-bottom: 0;">
             <div class="form-group" style="margin-bottom: 0;">
               <label>
-                <span>开始时间（GMT+8，空则为「即刻」）</span>
+                <span>开始时间（UTC+8，空则为「即刻」）</span>
                 <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="clearStartTime()">设为即刻</button>
               </label>
               <input type="datetime-local" id="startTime" class="form-control" onchange="renderAnnouncement()" />
             </div>
             <div class="form-group" style="margin-bottom: 0;">
               <label>
-                <span>结束/完成时间（GMT+8，空则为「待定」）</span>
+                <span>结束/完成时间（UTC+8，空则为「待定」）</span>
                 <button type="button" class="btn btn-outline" style="padding:1px 6px;font-size:11px;" onclick="clearEndTime()">设为待定</button>
               </label>
               <input type="datetime-local" id="endTime" class="form-control" onchange="renderAnnouncement()" />
@@ -853,7 +849,7 @@
 
           <div class="rule-status-bar">
             <span id="timeDiffText" style="color:var(--text-sub);">时间差计算中...</span>
-            <span style="color:var(--text-muted);">所有时间自动转换至 GMT+8</span>
+            <span style="color:var(--text-muted);">所有时间自动转换至 UTC+8</span>
           </div>
         </div>
 
@@ -1104,29 +1100,29 @@
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
-    // 获取当前时刻对应的 GMT+8 时间对象（无论本地/浏览器处于哪个时区，均换算为 GMT+8）
+    // 获取当前时刻对应的 UTC+8 时间对象（无论本地/浏览器处于哪个时区，均换算为 UTC+8）
     function getNowInUtc8() {
       const now = new Date();
       const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
       return new Date(utcMs + 8 * 3600 * 1000);
     }
 
-    // 将日期时间字符串按 GMT+8 格式化为：xx月xx日 xx:xx (GMT+8)，空值按 fallback 返回
+    // 将日期时间字符串按 UTC+8 格式化为：xx月xx日 xx:xx (UTC+8)，空值按 fallback 返回
     function formatAnnouncementTime(dtLocalStr, fallbackText) {
       if (!dtLocalStr) return fallbackText;
       // dtLocalStr 形如 "2026-11-24T16:30"
       const m = String(dtLocalStr).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
       if (m) {
-        return `${m[2]}月${m[3]}日 ${m[4]}:${m[5]} (GMT+8)`;
+        return `${m[2]}月${m[3]}日 ${m[4]}:${m[5]} (UTC+8)`;
       }
       const d = new Date(dtLocalStr);
       if (isNaN(d.getTime())) return fallbackText;
       const utc8Date = new Date(d.getTime() + (d.getTimezoneOffset() + 8 * 60) * 60000);
       const pad = n => String(n).padStart(2, '0');
-      return `${pad(utc8Date.getMonth() + 1)}月${pad(utc8Date.getDate())}日 ${pad(utc8Date.getHours())}:${pad(utc8Date.getMinutes())} (GMT+8)`;
+      return `${pad(utc8Date.getMonth() + 1)}月${pad(utc8Date.getDate())}日 ${pad(utc8Date.getHours())}:${pad(utc8Date.getMinutes())} (UTC+8)`;
     }
 
-    // 将任意带时区偏移（如 UTC+0 / UTC-5 / GMT-4 / 北京时间 / EST）的时间字符串换算为 GMT+8
+    // 将任意带时区偏移（如 UTC+0 / UTC-5 / GMT-4 / 北京时间 / EST）的时间字符串换算为 UTC+8
     function convertTextTimeToUtc8(str) {
       if (!str) return '';
       let out = String(str);
@@ -1140,15 +1136,15 @@
           const nh = String(Math.floor(wrappedMins / 60)).padStart(2, '0');
           const nm = String(wrappedMins % 60).padStart(2, '0');
           const secPart = ss ? `:${ss}` : '';
-          return `${nh}:${nm}${secPart} （GMT+8）`;
+          return `${nh}:${nm}${secPart} （UTC+8）`;
         }
       );
-      // 统一将 GMT+8 / 北京时间 / UTC+8 规范标注为 GMT+8
-      out = out.replace(/[（(]\s*(?:GMT\+8|北京时间|GMT\+8)\s*[）)]/gi, ' （GMT+8）');
+      // 统一将 GMT+8 / 北京时间 / UTC+8 规范标注为 UTC+8
+      out = out.replace(/[（(]\s*(?:GMT\+8|北京时间|UTC\+8)\s*[）)]/gi, ' （UTC+8）');
       return out;
     }
 
-    // 初始化默认时间（按 GMT+8 时区）
+    // 初始化默认时间（按 UTC+8 时区）
     function initDefaultTimes() {
       const nowUtc8 = getNowInUtc8();
       const startUtc8 = new Date(nowUtc8.getTime() + 2.5 * 3600 * 1000);
@@ -1215,9 +1211,15 @@
       document.getElementById('selectedGamesSection').style.display = scope === 'game' ? 'block' : 'none';
       document.getElementById('platformSelectRow').style.display = scope === 'platform' ? 'grid' : 'none';
 
-      if (scope === 'platform' && selectedPlatform !== 'ALL') {
-        fullMaintenancePlatforms.clear();
-        fullMaintenancePlatforms.add(selectedPlatform);
+      const selectorEl = document.getElementById('fullPlatformSelector');
+      if (scope === 'platform') {
+        if (selectedPlatform !== 'ALL') {
+          fullMaintenancePlatforms.clear();
+          fullMaintenancePlatforms.add(selectedPlatform);
+          if (selectorEl) selectorEl.dataset.manualSelected = '1';
+        } else {
+          if (selectorEl) delete selectorEl.dataset.manualSelected;
+        }
       }
       renderFullPlatformSelector();
       renderAnnouncement();
@@ -1282,7 +1284,8 @@
           if (maintenanceScope === 'platform') {
             fullMaintenancePlatforms.clear();
             fullMaintenancePlatforms.add(pf);
-            renderFullPlatformSelector();
+            const selectorEl = document.getElementById('fullPlatformSelector');
+            if (selectorEl) selectorEl.dataset.manualSelected = '1';
           }
           validateCategorySelection();
           refreshUI();
@@ -1455,13 +1458,18 @@
       selectedPlatform = 'ALL';
       selectedCategory = 'ALL';
       searchKeyword = '';
+      selectedGameIds.clear();
+      fullMaintenancePlatforms.clear();
+      const selectorEl = document.getElementById('fullPlatformSelector');
+      if (selectorEl) delete selectorEl.dataset.manualSelected;
       document.getElementById('searchInput').value = '';
       document.getElementById('clearSearchBtn').classList.remove('visible');
+      document.getElementById('importBanner').classList.remove('visible');
       refreshUI();
-      showToast('已重置所有筛选条件');
+      showToast('已重置筛选条件并清空已选游戏与公告');
     }
 
-    // 核心：按预设【当前】发布时间（GMT+8）与开始维护时间差自动判定「例行维护通知」或「临时维护通知」
+    // 核心：按预设【当前】发布时间（UTC+8）与开始维护时间差自动判定「例行维护通知」或「临时维护通知」
     function determineMaintenanceType() {
       const override = document.getElementById('noticeTypeOverride').value;
       const startStr = document.getElementById('startTime').value;
@@ -1475,7 +1483,7 @@
         isRoutine = false;
         reasonText = '未侦测到/未指定开始时间（开始=即刻）→ 判定为【临时维护通知】';
       } else {
-        // 发布时间预设为【当前】（GMT+8），与开始时间（GMT+8）直接计算差值
+        // 发布时间预设为【当前】（UTC+8），与开始时间（UTC+8）直接计算差值
         const nowUtc8 = getNowInUtc8();
         const sm = String(startStr).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
         const startUtc8 = sm
@@ -1512,6 +1520,16 @@
       return noticeTitle;
     }
 
+    // 辅助：若平台名称后方已有「视讯/体育/彩票/棋牌/电子/捕鱼/平台」等字眼，则不再追加「平台」；否则自动补齐「平台」
+    function formatPlatformWithSuffix(pfName) {
+      const clean = String(pfName || '').trim();
+      if (!clean) return '';
+      if (/(?:平台|视讯|体育|彩票|棋牌|电子|捕鱼|电竞)$/.test(clean)) {
+        return `【${clean}】`;
+      }
+      return `【${clean}平台】`;
+    }
+
     // 严格按照指定格式生成公告文本（无开始时间=即刻，无结束时间=待定）
     function renderAnnouncement() {
       const noticeTitle = determineMaintenanceType();
@@ -1521,14 +1539,19 @@
       const endFormatted = formatAnnouncementTime(endStr, '待定');
       const previewEl = document.getElementById('announcementPreview');
 
-      // 模式一：全平台维护格式
+      // 模式一：全平台维护格式（强制从左侧选择平台，若左侧为「全部平台」则提示先点选具体平台）
       if (maintenanceScope === 'platform') {
-        const targetPlatforms = Array.from(fullMaintenancePlatforms);
-        if (targetPlatforms.length === 0) {
-          previewEl.value = '【提示】请先选择需要进行全平台维护的平台名称。';
+        let targetPlatforms = [];
+        if (selectedPlatform !== 'ALL') {
+          targetPlatforms = [selectedPlatform];
+        } else {
+          targetPlatforms = Array.from(fullMaintenancePlatforms);
+        }
+        if (targetPlatforms.length === 0 || (selectedPlatform === 'ALL' && !document.getElementById('fullPlatformSelector').dataset.manualSelected)) {
+          previewEl.value = '【提示】全平台维护模式下，请在左侧「1. 选择平台」中点击选择目标平台。';
           return;
         }
-        const platformStr = targetPlatforms.map(p => `【${p}】`).join('');
+        const platformStr = targetPlatforms.map(p => formatPlatformWithSuffix(p)).join('');
         previewEl.value = `尊敬的客户您好，兹通知您${platformStr}${noticeTitle}
  
 维护平台： ${platformStr}
@@ -1551,10 +1574,11 @@
       }
 
       const uniquePlatforms = Array.from(new Set(selectedList.map(g => g.platform)));
-      const platformStr = uniquePlatforms.map(p => `【${p}】`).join('');
+      const platformStr = uniquePlatforms.map(p => formatPlatformWithSuffix(p)).join('');
 
       const titleGameTag = '【单一游戏】';
-      const gameLineStr = selectedList.map(g => `【${g.name}】`).join('、');
+      // 每款维护游戏之间不保留「、」，直接拼接为【游戏1】【游戏2】
+      const gameLineStr = selectedList.map(g => `【${g.name}】`).join('');
 
       previewEl.value = `尊敬的客户您好，兹通知您${platformStr}${titleGameTag}${noticeTitle}
  
@@ -2338,7 +2362,7 @@
       const detectedPeriods = [];
 
       // 提取全局时区提示（如 北京时间 / GMT+8 / 美东时间）
-      const globalTzMatch = fullStr.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|GMT[+-]\d+)\s*[）)]/i);
+      const globalTzMatch = fullStr.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|UTC[+-]\d+)\s*[）)]/i);
       const globalTzSuffix = globalTzMatch ? ` （${globalTzMatch[1]}）` : '';
 
       // 3A. DOM 显式分期
@@ -2416,7 +2440,7 @@
 
       if (totalTimeRaw) {
         let rawTimeVal = totalTimeRaw.replace(/共计.*$/, '').trim();
-        const tzMatch = rawTimeVal.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|GMT[+-]\d+)\s*[）)]/i);
+        const tzMatch = rawTimeVal.match(/[（(]\s*(GMT[+-]\d+|北京时间|美东时间|UTC[+-]\d+)\s*[）)]/i);
         const tzSuffix = tzMatch ? ` （${tzMatch[1]}）` : globalTzSuffix;
         const dailyRangeMatch = rawTimeVal.match(/([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\s*[\-~至到—–]\s*([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?/);
 
@@ -2453,7 +2477,7 @@
             });
           }
         } else {
-          // 连续时间区间或单截止时间（例如：2026年12月01日 00:00:00 - 2026年12月14日 23:59:59（北京时间） 或 2026/10/7 23:59:59（GMT+8））
+          // 连续时间区间或单截止时间（例如：2026年12月01日 00:00:00 - 2026年12月14日 23:59:59（北京时间） 或 2026/10/7 23:59:59（UTC+8））
           let cleaned = rawTimeVal
             .replace(/[，,]\s*(?:持续|共|总计).*$/, '')
             .replace(/20\d{2}[年\.\/\-]/g, '');
